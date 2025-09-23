@@ -48,7 +48,7 @@ const exampleSemesters: Semester[] = [
   {
     numero: 6,
     cursos: [
-      { nombre: "Redes de Computadores", notaFinal: null, codigo: "INF303", creditos: 5, intentos: 1 },
+      { nombre: "Redes del papu", notaFinal: null, codigo: "INF303", creditos: 5, intentos: 1 },
       { nombre: "Investigación de Operaciones", notaFinal: null, codigo: "ADM201", creditos: 5, intentos: 1 },
       { nombre: "Ingeniería de Software II", notaFinal: null, codigo: "INF304", creditos: 6, intentos: 1 },
     ],
