@@ -1,7 +1,15 @@
-import React from "react";
-import "./Sidebar.css";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import './Sidebar.css';
 
 const Sidebar: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/');
+  };
+
   return (
     <aside className="sidebar">
       <div className="sidebar-profile">
@@ -18,7 +26,10 @@ const Sidebar: React.FC = () => {
         <button className="sidebar-btn">Avance Curricular</button>
         <button className="sidebar-btn">Proyecciones</button>
       </nav>
-      <button className="sidebar-logout">Cerrar sesión</button>
+      {/* El botón de logout ahora usará los nuevos estilos y llama a la función */}
+      <button className="sidebar-logout" onClick={handleLogout}>
+        Cerrar sesión
+      </button>
     </aside>
   );
 };
