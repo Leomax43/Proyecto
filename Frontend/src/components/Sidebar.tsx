@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Sidebar.css';
 
+const userRole = localStorage.getItem('rol');
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
 
@@ -30,6 +31,13 @@ const Sidebar: React.FC = () => {
       <button className="sidebar-logout" onClick={handleLogout}>
         Cerrar sesión
       </button>
+      
+      <nav>
+        {userRole === 'admin' && (//puede que esto se tenga que cambiar (para despues**)
+          <button>Panel de Administrador</button>
+        )}
+      </nav>
+
     </aside>
   );
 };
