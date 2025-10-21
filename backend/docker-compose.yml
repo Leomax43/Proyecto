@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: ucn_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ucn_user
+      POSTGRES_PASSWORD: ucn_pass
+      POSTGRES_DB: proyecciones_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+
+  # (opcional) podríamos agregar el backend NestJS más adelante aquí también
+  
