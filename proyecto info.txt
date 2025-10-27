@@ -3,8 +3,8 @@ Proyecto
 
 
 Pc nuevo configurar
-cd backend
-npm install
+
+
 
 revisar el wsl
 ver si esta instalado
@@ -12,6 +12,28 @@ wsl --status
 
 si ya esta instalado usamos
 wsl --update
+
+instalar docker desktop
+
+abrir docker desktop antes de levantar el backend
+
+revisar si en la carpeta backend hay un archivo llamado ".env" creado
+debe contener lo sgte:
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=ucn_user
+DB_PASSWORD=ucn_pass
+DB_DATABASE=proyecciones_db
+
+luego se debe levantar el contenedor
+docker compose up -d
+ver si funca
+docker ps
+
+luego ahi recién
+cd backend
+npm install
+
 
 
 1ero el backend
@@ -45,3 +67,17 @@ Paso	Acción						Comando
 8	Ejecutar backend				npm run start:dev
 9	Ejecutar frontend				npm run dev
 10	Probar conexión				localhost:5173
+
+
+
+una vez que ya este instalado se puede iniciar normalmente:
+
+-abrir docker desktop
+
+-iniciar backend 
+npm run start:dev
+
+-luego el frontend
+npm run dev
+
+y funca

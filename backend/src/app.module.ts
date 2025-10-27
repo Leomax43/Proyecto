@@ -23,7 +23,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],       // Se importa aquí también
       inject: [ConfigService],       // Se inyecta el servicio
-      useFactory: (configService: ConfigService) => ({ // Esta es la línea que mencionaste
+      useFactory: (configService: ConfigService) => {
+        console.log('DB Config:', {
+        host: configService.get('DB_HOST'),
+        user: configService.get('DB_USERNAME'),
+        pass: configService.get('DB_PASSWORD'),
+      });
+      return {
         type: 'postgres',
         host: configService.get<string>('DB_HOST'),
         port: configService.get<number>('DB_PORT', 5432),
@@ -32,7 +38,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         database: configService.get<string>('DB_DATABASE'),
         autoLoadEntities: true,
         synchronize: true,
-      }),
+        };
+      },
+
     }),
   ],
   controllers: [AppController, UsersController, UcnController],
