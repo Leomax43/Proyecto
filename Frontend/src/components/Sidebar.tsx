@@ -1,9 +1,12 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+// Importa 'NavLink' para los botones de navegación y 'useNavigate' para el logout
+import { NavLink, useNavigate } from 'react-router-dom';
 import './Sidebar.css';
 
 const userRole = localStorage.getItem('rol');
+
 const Sidebar: React.FC = () => {
+  // 'useNavigate' se sigue usando para la función de logout
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -22,22 +25,54 @@ const Sidebar: React.FC = () => {
           <div className="sidebar-user-career">Carrera del usuario</div>
         </div>
       </div>
+
       <nav className="sidebar-nav">
-        <button className="sidebar-btn active">Malla Curricular</button>
-        <button className="sidebar-btn">Avance Curricular</button>
-        <button className="sidebar-btn">Proyecciones</button>
+        {/*
+          Usamos NavLink en lugar de <button>.
+          La prop 'className' recibe una función.
+          El argumento '{ isActive }' es un booleano que nos da React Router.
+          Si 'isActive' es true, aplicamos la clase "sidebar-btn active".
+          Si es false, solo aplicamos "sidebar-btn".
+        */}
+        
+        <NavLink
+          to="/malla"
+          className={({ isActive }) =>
+            isActive ? "sidebar-btn active" : "sidebar-btn"
+          }
+        >
+          Malla Curricular
+        </NavLink>
+
+        <NavLink
+          to="/avance"
+          className={({ isActive }) =>
+            isActive ? "sidebar-btn active" : "sidebar-btn"
+          }
+        >
+          Avance Curricular
+        </NavLink>
+
+        <NavLink
+          to="/proyecciones"
+          className={({ isActive }) =>
+            isActive ? "sidebar-btn active" : "sidebar-btn"
+          }
+        >
+          Proyecciones
+        </NavLink>
       </nav>
-      {/* El botón de logout ahora usará los nuevos estilos y llama a la función */}
+
+      {/* Botón de logout con el onClick que ya tenías */}
       <button className="sidebar-logout" onClick={handleLogout}>
         Cerrar sesión
       </button>
-      
+
       <nav>
         {userRole === 'admin' && (//puede que esto se tenga que cambiar (para despues**)
           <button>Panel de Administrador</button>
         )}
       </nav>
-
     </aside>
   );
 };
