@@ -67,7 +67,7 @@ const Login: React.FC = () => {
         localStorage.setItem('rut', data.rut);
         localStorage.setItem('carreras', JSON.stringify(data.carreras));
         localStorage.setItem('rol', data.rol); // 👈 Esta línea guarda el rol
-        navigate('/home');
+        window.location.href = '/home';
       }
     } catch (err) {
       console.error(err);

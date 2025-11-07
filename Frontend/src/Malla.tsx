@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react"; 
+// 1. Importamos useNavigate para redirigir si no hay sesión
+import { useNavigate } from "react-router-dom";
 import CurriculumGrid from "./components/CurriculumGrid";
 import type { Semester } from "./components/CurriculumGrid";
 import "./components/CurriculumGrid.css";
@@ -6,7 +8,6 @@ import Sidebar from "./components/Sidebar";
 import "./components/Sidebar.css";
 
 // --- INTERFACES ---
-// 1. Definimos el tipo de curso que esperamos de tu API
 interface ApiCurso {
   codigo: string;
   asignatura: string;
@@ -15,7 +16,6 @@ interface ApiCurso {
   prereq: string;
 }
 
-// 2. Definimos el tipo de curso que tu componente CurriculumGrid espera
 interface CursoGrid {
   nombre: string;
   notaFinal: number | null;
@@ -23,40 +23,38 @@ interface CursoGrid {
   creditos: number;
   intentos: number;
 }
+
+// 2. Definimos una interfaz para la carrera (del localStorage)
+interface Carrera {
+  codigo: string;
+  nombre: string;
+  catalogo: string;
+}
 // --- FIN INTERFACES ---
 
 
-// --- FUNCIÓN TRADUCTORA (La Lógica Clave) ---
-/**
- * Agrupa la lista plana de cursos de la API en la estructura
- * de Semestres que el componente CurriculumGrid espera.
- */
+// --- FUNCIÓN TRADUCTORA (Sin cambios) ---
 const transformarApiASemestres = (apiData: ApiCurso[]): Semester[] => {
-  // 1. Usamos un Map para agrupar cursos por 'nivel'
   const grupos = new Map<number, CursoGrid[]>();
 
   apiData.forEach(apiCurso => {
     const nivel = apiCurso.nivel;
-
-    // 2. "Traduce" el formato del API al formato del Grid
     const cursoGrid: CursoGrid = {
       codigo: apiCurso.codigo,
       nombre: apiCurso.asignatura,
       creditos: apiCurso.creditos,
-      notaFinal: null, // La API de malla no nos da la nota
-      intentos: 1       // Ponemos 1 por defecto
+      notaFinal: null,
+      intentos: 1
     };
 
-    // 3. Agrega el curso al grupo de su nivel
     if (!grupos.has(nivel)) {
       grupos.set(nivel, []);
     }
     grupos.get(nivel)!.push(cursoGrid);
   });
 
-  // 4. Convierte el Map (grupos) en el Array final de Semestres
   const semestres: Semester[] = Array.from(grupos.entries())
-    .sort((a, b) => a[0] - b[0]) // Ordena por nivel (Semestre 1, 2, 3...)
+    .sort((a, b) => a[0] - b[0])
     .map(([nivel, cursos]) => ({
       numero: nivel,
       cursos: cursos
@@ -68,66 +66,80 @@ const transformarApiASemestres = (apiData: ApiCurso[]): Semester[] => {
 
 
 function Malla() {
-  // 3. Creamos un estado para guardar los semestres
   const [semestres, setSemestres] = useState<Semester[]>([]);
-  // 4. Creamos un estado de carga
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate(); // 3. Inicializamos useNavigate
 
-  // 5. useEffect se ejecuta 1 sola vez cuando el componente se carga
   useEffect(() => {
-    
     const fetchMallaData = async () => {
       try {
-        // 6. ¡Llamamos a NUESTRO PROPIO backend!
-        const response = await fetch('http://localhost:3000/ucn/malla?codigo=8606&catalogo=202320');
+        // --- INICIO DE LA LÓGICA DINÁMICA ---
+        
+        // 4. Leemos las carreras del localStorage (la guardaste en Login.tsx)
+        const carrerasString = localStorage.getItem('carreras');
+        if (!carrerasString) {
+          setError('No se encontraron datos de carrera. Por favor, inicie sesión.');
+          navigate('/'); // Redirigimos al Login
+          return;
+        }
+
+        // 5. Parseamos los datos
+        const carreras: Carrera[] = JSON.parse(carrerasString);
+
+        if (!carreras || carreras.length === 0) {
+          setError('El usuario no tiene carreras asociadas.');
+          return;
+        }
+        
+        // 6. Seleccionamos la carrera (usamos la primera de la lista)
+        const carreraActual = carreras[0]; 
+        const codigo = carreraActual.codigo;
+        const catalogo = carreraActual.catalogo;
+        
+        // --- FIN DE LA LÓGICA DINÁMICA ---
+
+        // 7. Construimos la URL de forma dinámica
+        const url = `http://localhost:3000/ucn/malla?codigo=${codigo}&catalogo=${catalogo}`;
+        
+        const response = await fetch(url);
         
         if (!response.ok) {
           throw new Error('Error al obtener la malla del backend (response no ok)');
         }
 
-        const dataApi = await response.json(); // La API podría devolver un Array o un Objeto de error
+        const dataApi = await response.json(); 
 
-        // --- INICIO DE LA SOLUCIÓN ---
-        // 7. Verificamos si la respuesta NO es un array
         if (!Array.isArray(dataApi)) {
-          // Si es un objeto (ej: {"error": "..."}), lanzamos un error
           console.error("La API no devolvió un array:", dataApi);
           throw new Error('La API no devolvió una malla de cursos válida.');
         }
-        // --- FIN DE LA SOLUCIÓN ---
         
-        // 8. Usamos la función "traductora" (Ahora estamos seguros de que dataApi es un Array)
         const semestresFormateados = transformarApiASemestres(dataApi as ApiCurso[]);
-        
-        // 9. Actualizamos el estado con los datos reales
         setSemestres(semestresFormateados);
 
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido');
       } finally {
-        // 10. Dejamos de cargar (en éxito o error)
         setIsLoading(false);
       }
     };
 
     fetchMallaData();
-  }, []); // El array vacío '[]' asegura que se ejecute solo 1 vez
+  }, [navigate]); // 8. Añadimos 'navigate' a las dependencias
 
-  // --- RENDERIZADO ---
+  // --- RENDERIZADO (Sin cambios, esto está bien) ---
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar />
       <div style={{ flex: 1 }}>
         
-        {/* Mostramos un mensaje de carga */}
         {isLoading && (
           <div style={{ padding: '2rem' }}>
             <h2>Cargando malla curricular...</h2>
           </div>
         )}
 
-        {/* Mostramos un mensaje de error si algo falló */}
         {error && (
           <div style={{ padding: '2rem', color: 'red' }}>
             <h2>Error: {error}</h2>
@@ -135,7 +147,6 @@ function Malla() {
           </div>
         )}
 
-        {/* Si no hay carga y no hay error, mostramos la malla */}
         {!isLoading && !error && (
           <CurriculumGrid semestres={semestres} />
         )}
