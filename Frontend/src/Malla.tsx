@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react"; 
-// 1. Importamos useNavigate para redirigir si no hay sesión
 import { useNavigate } from "react-router-dom";
 import CurriculumGrid from "./components/CurriculumGrid";
-import type { Semester } from "./components/CurriculumGrid";
+// 1. IMPORTANTE: 'Semester' se actualizará, pero la definición está en CurriculumGrid.tsx
+import type { Semester, CursoGrid } from "./components/CurriculumGrid"; 
 import "./components/CurriculumGrid.css";
 import Sidebar from "./components/Sidebar";
 import "./components/Sidebar.css";
 
 // --- INTERFACES ---
+// 'ApiCurso' sigue igual (lo que viene del backend)
 interface ApiCurso {
   codigo: string;
   asignatura: string;
@@ -16,15 +17,7 @@ interface ApiCurso {
   prereq: string;
 }
 
-interface CursoGrid {
-  nombre: string;
-  notaFinal: number | null;
-  codigo: string;
-  creditos: number;
-  intentos: number;
-}
-
-// 2. Definimos una interfaz para la carrera (del localStorage)
+// 'Carrera' del localStorage sigue igual
 interface Carrera {
   codigo: string;
   nombre: string;
@@ -33,18 +26,21 @@ interface Carrera {
 // --- FIN INTERFACES ---
 
 
-// --- FUNCIÓN TRADUCTORA (Sin cambios) ---
+// --- FUNCIÓN TRADUCTORA (ACTUALIZADA) ---
 const transformarApiASemestres = (apiData: ApiCurso[]): Semester[] => {
   const grupos = new Map<number, CursoGrid[]>();
 
   apiData.forEach(apiCurso => {
     const nivel = apiCurso.nivel;
+    
+    // 2. "Traduce" el formato: AÑADIMOS 'prereq'
     const cursoGrid: CursoGrid = {
       codigo: apiCurso.codigo,
       nombre: apiCurso.asignatura,
       creditos: apiCurso.creditos,
-      notaFinal: null,
-      intentos: 1
+      notaFinal: null, 
+      intentos: 1,
+      prereq: apiCurso.prereq // <-- ¡CAMBIO IMPORTANTE!
     };
 
     if (!grupos.has(nivel)) {
@@ -67,24 +63,23 @@ const transformarApiASemestres = (apiData: ApiCurso[]): Semester[] => {
 
 function Malla() {
   const [semestres, setSemestres] = useState<Semester[]>([]);
+  // 3. NUEVO ESTADO: para guardar la lista plana de cursos
+  const [allCourses, setAllCourses] = useState<ApiCurso[]>([]); 
+  
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate(); // 3. Inicializamos useNavigate
+  const navigate = useNavigate(); 
 
   useEffect(() => {
     const fetchMallaData = async () => {
       try {
-        // --- INICIO DE LA LÓGICA DINÁMICA ---
-        
-        // 4. Leemos las carreras del localStorage (la guardaste en Login.tsx)
         const carrerasString = localStorage.getItem('carreras');
         if (!carrerasString) {
           setError('No se encontraron datos de carrera. Por favor, inicie sesión.');
-          navigate('/'); // Redirigimos al Login
+          navigate('/'); 
           return;
         }
 
-        // 5. Parseamos los datos
         const carreras: Carrera[] = JSON.parse(carrerasString);
 
         if (!carreras || carreras.length === 0) {
@@ -92,14 +87,10 @@ function Malla() {
           return;
         }
         
-        // 6. Seleccionamos la carrera (usamos la primera de la lista)
         const carreraActual = carreras[0]; 
         const codigo = carreraActual.codigo;
         const catalogo = carreraActual.catalogo;
         
-        // --- FIN DE LA LÓGICA DINÁMICA ---
-
-        // 7. Construimos la URL de forma dinámica
         const url = `http://localhost:3000/ucn/malla?codigo=${codigo}&catalogo=${catalogo}`;
         
         const response = await fetch(url);
@@ -115,6 +106,10 @@ function Malla() {
           throw new Error('La API no devolvió una malla de cursos válida.');
         }
         
+        // 4. Guardamos la lista plana de cursos en el nuevo estado
+        setAllCourses(dataApi as ApiCurso[]); 
+
+        // 5. La función "traductora" usará 'dataApi'
         const semestresFormateados = transformarApiASemestres(dataApi as ApiCurso[]);
         setSemestres(semestresFormateados);
 
@@ -126,9 +121,9 @@ function Malla() {
     };
 
     fetchMallaData();
-  }, [navigate]); // 8. Añadimos 'navigate' a las dependencias
+  }, [navigate]);
 
-  // --- RENDERIZADO (Sin cambios, esto está bien) ---
+  // --- RENDERIZADO (ACTUALIZADO) ---
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar />
@@ -147,8 +142,9 @@ function Malla() {
           </div>
         )}
 
+        {/* 6. Pasamos 'allCourses' como prop al Grid */}
         {!isLoading && !error && (
-          <CurriculumGrid semestres={semestres} />
+          <CurriculumGrid semestres={semestres} allCourses={allCourses} />
         )}
         
       </div>

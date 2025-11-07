@@ -65,9 +65,13 @@
     width: 100%;
     min-height: 60px;
     max-width: 100%;
+  /* Añadimos una transición suave para el hover */
+  transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
 .course-card:hover {
   background: #f0f9f5;
+  transform: translateY(-2px); /* Pequeño efecto de "levantar" */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .course-code {
@@ -102,3 +106,63 @@
   text-align: right;
 }
 
+/* ---------------------------------------------
+--- ESTILOS PARA EL TOOLTIP DE PRERREQUISITOS ---
+---------------------------------------------
+*/
+
+.prereq-tooltip {
+  position: fixed; /* Se queda fijo en la pantalla */
+  bottom: 20px;    /* A 20px del borde inferior */
+  right: 20px;     /* A 20px del borde derecho */
+  width: 300px;
+  background-color: #2c3e50; /* Color de fondo oscuro */
+  color: #ecf0f1;           /* Color de texto claro */
+  border: 1px solid #34495e;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  z-index: 1000; /* Asegura que esté por encima de todo */
+  font-family: "Segoe UI", Arial, sans-serif; /* Usamos tu misma fuente */
+  opacity: 0.95;
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out; /* Pequeña transición */
+  transform: translateY(0);
+}
+
+.prereq-title {
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: #95a5a6; /* Un gris claro */
+}
+
+.prereq-course-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.prereq-tooltip hr {
+  border: 0;
+  border-top: 1px solid #34495e;
+  margin: 10px 0;
+}
+
+.prereq-tooltip ul {
+  margin: 0;
+  padding-left: 20px; /* Indentación para la lista */
+}
+
+.prereq-tooltip li {
+  font-size: 0.95rem;
+  margin-bottom: 5px;
+}
+
+/* Estilo para el texto "Sin Pre-Requisitos" */
+.prereq-none {
+  font-size: 0.95rem;
+  color: #95a5a6; /* Un gris claro */
+  font-style: italic;
+  text-align: center;
+  padding: 10px 0;
+}
