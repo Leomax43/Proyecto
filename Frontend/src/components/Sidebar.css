@@ -1,7 +1,7 @@
 
 .sidebar {
   background: linear-gradient(135deg, #357890 0%, #183a5a 100%);
-  height: 100vh;
+
   width: 270px;
   min-width: 270px;
   max-width: 270px;
@@ -67,12 +67,12 @@
 }
 
 .sidebar-btn {
-  width: 100%;
-  padding: 0.7rem 0;
+  width: 100pvx;
+  padding: 10px;
   border-radius: 8px;
   border: none;
   background: #fff;
-  color: #357890;
+  color: #2c5a6a;
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
@@ -80,13 +80,13 @@
 }
 
 .sidebar-btn:not(.active) {
-  background: #7fa6c1;
-  color: #fff;
+  background: #527c9a;
+  color: #d5d5d5;
 }
 
 .sidebar-btn.active {
-  background: #fff;
-  color: #357890;
+  background: #ffffff;
+  color: #05506b;
 }
 
 .sidebar-logout {
@@ -94,7 +94,7 @@
   padding: 0.7rem 0;
   border-radius: 8px;
   border: none;
-  background: #ffa726;
+  background: #f39c12;
   color: #fff;
   font-weight: 600;
   font-size: 1rem;
@@ -105,5 +105,5 @@
 }
 
 .sidebar-logout:hover {
-  background: #fb8c00;
+  background: #e38e04;
 }

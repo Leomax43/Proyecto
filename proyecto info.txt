@@ -81,3 +81,14 @@ npm run start:dev
 npm run dev
 
 y funca
+
+--------------------------------------------
+
+Datos de Prueba
+
+
+maria@example.com
+abcd
+
+ximena@example.com
+qwerty

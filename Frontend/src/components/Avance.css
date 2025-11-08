@@ -1,0 +1,79 @@
+/* Styles for Avance view (prototype) */
+.avance-container {
+  padding: 10px 30px;
+  background-color: #f5f7fa;
+}
+.avance-header h1 {
+  margin: 0 0 16px 0;
+  font-size: 28px;
+  color: #002b5c;
+}
+
+.years-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.year-block {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.year-header {
+  background: #1e5972;
+  color: #fff;
+  padding: 12px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  border-bottom: 4px solid rgba(255, 0, 0, 0.08);
+}
+.year-title { font-weight: 700; font-size: 18px; }
+.year-toggle { font-size: 20px; width: 28px; height: 28px; display:flex;align-items:center;justify-content:center;background: rgba(255,255,255,0.15);border-radius:50%; }
+
+.year-content { padding: 18px; }
+
+.semester-row {
+  /* Usamos grid para fijar una columna para la etiqueta y mantener
+     la posición de las tarjetas independiente del ancho del texto */
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+.semester-label {
+  background: #f0f6f7;
+  color: #2c6a79;
+  padding: 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+.semester-courses {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.avance-course { background: #fff; border-radius: 8px; padding: 10px 12px; min-width: 120px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display:flex; flex-direction:column; gap:6px; }
+.avance-course .course-code { font-weight:700; font-size: 13px; color:#123; }
+.avance-course .course-status { font-size: 12px; color:#555; }
+
+/* status colors */
+.avance-course.status-approved { border-left: 6px solid #2d9d5b; }
+.avance-course.status-failed { border-left: 6px solid #e74c3c; }
+.avance-course.status-enrolled { border-left: 6px solid #f39c12; }
+.avance-course.status-unknown { border-left: 6px solid #95a5a6; }
+
+/* responsive */
+@media (max-width: 900px) {
+  .semester-label { min-width: 90px; font-size: 13px; }
+  .avance-course { min-width: 100px; padding:8px; }
+}

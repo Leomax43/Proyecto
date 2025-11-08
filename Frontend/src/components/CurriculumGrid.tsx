@@ -21,18 +21,20 @@ export type CursoGrid = {
 export type Semester = {
   numero: number;
   cursos: CursoGrid[];
+  headerLabel?: string;
 };
 
 export type CurriculumGridProps = {
   semestres: Semester[];
   allCourses: ApiCurso[]; 
+  carrera?: string;
 };
 // --- FIN DE TIPOS ---
 
 const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 
 // --- INICIO DEL COMPONENTE ---
-const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses }) => {
+const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses, carrera }) => {
   const [hoveredCourse, setHoveredCourse] = useState<CursoGrid | null>(null);
 
   const findCourseName = (codigo: string): string => {
@@ -40,13 +42,15 @@ const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses }
     return course ? course.asignatura : codigo;
   };
 
+  const title = carrera ? `Malla curricular - ${carrera}` : 'Malla de carrera usuario';
+
   return (
     <div className="curriculum-main">
-      <h2 className="curriculum-title">Malla de carrera usuario</h2>
+      <h2 className="curriculum-title">{title}</h2>
       <div className="curriculum-grid">
-        {semestres.map((sem) => (
-          <div key={sem.numero} className="semester-column">
-            <div className="semester-header">{romanNumerals[sem.numero - 1]}</div>
+        {semestres.map((sem, idx) => (
+          <div key={sem.numero ?? idx} className="semester-column">
+            <div className="semester-header">{sem.headerLabel ?? romanNumerals[sem.numero - 1]}</div>
             {sem.cursos.map((curso) => (
               <div
                 key={curso.codigo}
