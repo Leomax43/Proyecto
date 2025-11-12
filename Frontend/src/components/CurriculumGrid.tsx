@@ -29,9 +29,27 @@ export type CurriculumGridProps = {
   allCourses: ApiCurso[]; 
   carrera?: string;
 };
+
+
+
 // --- FIN DE TIPOS ---
 
 const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+
+// -- Leer nombre de la carrera desde localStorage (mismo enfoque que en Sidebar.tsx)
+let careerNameFromStorage = 'Malla de carrera usuario';
+const carrerasString = localStorage.getItem('carreras');
+if (carrerasString) {
+  try {
+    const carrerasParsed = JSON.parse(carrerasString);
+    if (Array.isArray(carrerasParsed) && carrerasParsed.length > 0) {
+      careerNameFromStorage = typeof carrerasParsed[0] === 'string' ? carrerasParsed[0] : carrerasParsed[0].nombre || careerNameFromStorage;
+    }
+  } catch (e) {
+    // si no es JSON, usar el valor tal cual
+    careerNameFromStorage = carrerasString;
+  }
+}
 
 // --- INICIO DEL COMPONENTE ---
 const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses, carrera }) => {
@@ -42,7 +60,7 @@ const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses, 
     return course ? course.asignatura : codigo;
   };
 
-  const title = carrera ? `Malla curricular - ${carrera}` : 'Malla de carrera usuario';
+  const title = carrera ? `Malla curricular - ${carrera}` : `Malla curricular - ${careerNameFromStorage}`;
 
   return (
     <div className="curriculum-main">

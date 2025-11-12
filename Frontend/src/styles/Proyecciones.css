@@ -1,0 +1,67 @@
+/* Styles for Proyecciones page - similar look to Avance */
+.proyecciones-main {
+  flex: 1;
+  padding: 20px 28px;
+  background: #f5f7fa;
+}
+
+.proyecciones-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.proyecciones-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.proyecciones-header h1 { margin: 0; color: #002b5c; }
+.proyecciones-sub { color: #666; font-size: 0.95rem; }
+
+.proyecciones-actions .btn { margin-left: 8px; }
+
+.proyecciones-body { display: flex; gap: 18px; }
+.proyecciones-sidebar { width: 220px; }
+.proj-list-header { font-weight: 700; margin-bottom: 8px; color: #213547; }
+.proj-list { list-style: none; padding: 0; margin: 0; }
+.proj-item { padding: 10px; border-radius: 8px; background: #fff; margin-bottom: 8px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.06); color: #213547; }
+.proj-item.active { border-left: 6px solid #0b66ff; }
+.proj-title { font-weight: 600; color: #213547; }
+.proj-meta { font-size: 0.8rem; color: #666; }
+
+.proyecciones-detail { flex: 1; }
+.empty-state { padding: 28px; background: #fff; border-radius: 8px; text-align: center; color: #666; }
+
+.proj-head { display:flex; justify-content: space-between; align-items:center; gap:12px; margin-bottom: 12px; }
+.proj-title-input { font-size: 1.2rem; padding: 6px 8px; border-radius: 6px; border: 1px solid #ccc; flex: 1; }
+.proj-controls .btn { margin-left: 8px; }
+
+.years-list { display:flex; flex-direction: column; gap: 14px; }
+.year-block { background: #fff; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); overflow: hidden; }
+.year-header { background: #1e5972; color: #fff; padding: 12px 16px; display:flex; justify-content: space-between; align-items:center; cursor: pointer; }
+.year-content { padding: 14px; }
+
+.semester-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; align-items: start; margin-bottom: 12px; }
+.semester-label { background: #f0f6f7; color: #2c6a79; padding: 8px; border-radius: 6px; font-weight: 600; display:flex; align-items:center; }
+.semester-courses { display:flex; gap: 10px; flex-wrap: wrap; }
+
+.avance-course { background: #fff; border-radius: 8px; padding: 8px 10px; min-width: 120px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display:flex; flex-direction:column; gap:6px; cursor:pointer; }
+.avance-course .course-code { font-weight:700; font-size: 13px; color:#123; }
+.avance-course .course-status { font-size: 12px; color:#555; }
+
+.avance-course.status-aprobado { border-left: 6px solid #2d9d5b; }
+.avance-course.status-reprobado { border-left: 6px solid #e74c3c; }
+.avance-course.status-inscrito { border-left: 6px solid #f39c12; }
+.avance-course.status-planificado { border-left: 6px solid #95a5a6; }
+
+/* simple button styles used here */
+.btn { padding: 8px 10px; border-radius: 6px; border: none; background: #1e5972; cursor: pointer; }
+.btn.primary { background: #ffb357; color: #fff; font-weight: 700; }
+.btn.danger { background: #e74c3c; color: #fff; }
+
+@media (max-width: 900px) {
+  .proyecciones-body { flex-direction: column; }
+  .proyecciones-sidebar { width: auto; }
+  .semester-row { grid-template-columns: 1fr; }
+}

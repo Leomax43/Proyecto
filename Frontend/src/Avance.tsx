@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import Sidebar from './components/Sidebar';
-import './components/Avance.css';
+import './styles/Avance.css';
 
 // Mock data for the prototype (UI only). Más tarde conectaremos la API.
 const exampleAvance = [

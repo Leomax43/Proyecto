@@ -7,6 +7,7 @@ import HomeScreen from "./HomeScreen";
 import Login from "./components/Login";
 import Malla from "./Malla"; 
 import Avance from "./Avance";
+import Proyecciones from "./Proyecciones";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/home" element={<HomeScreen />} />
         <Route path="/malla" element={<Malla />} />
         <Route path="/avance" element={<Avance />} />
+        <Route path="/proyecciones" element={<Proyecciones />} />
       </Routes>
     </div>
     // 3. Quitamos la etiqueta de cierre </BrowserRouter> de aquí

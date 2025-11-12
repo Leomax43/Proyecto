@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react"; 
+import { useState, useEffect } from "react"; 
 import { useNavigate } from "react-router-dom";
 import CurriculumGrid from "./components/CurriculumGrid";
 // 1. IMPORTANTE: 'Semester' se actualizará, pero la definición está en CurriculumGrid.tsx
 import type { Semester, CursoGrid } from "./components/CurriculumGrid"; 
-import "./components/CurriculumGrid.css";
+import "./styles/CurriculumGrid.css";
 import Sidebar from "./components/Sidebar";
-import "./components/Sidebar.css";
+import "./styles/Sidebar.css";
 
 // --- INTERFACES ---
 // 'ApiCurso' sigue igual (lo que viene del backend)

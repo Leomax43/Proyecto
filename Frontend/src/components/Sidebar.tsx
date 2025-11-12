@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import './Sidebar.css';
+import '../styles/Sidebar.css';
 
 // --- INTERFAZ para la Carrera (solo para este componente) ---
 interface Carrera {
@@ -12,10 +12,22 @@ interface Carrera {
 // --- Lógica para leer datos del localStorage ---
 const userRole = localStorage.getItem('rol');
 
-// 1. Leemos el RUT
-const userRut = localStorage.getItem('rut');
-// (La API no nos da un nombre, así que usamos el RUT. Puedes cambiar "RUT: " por "Usuario: ")
-const userName = userRut ? `RUT: ${userRut}` : "Nombre de usuario"; 
+// Obtener nombre del usuario preferentemente desde 'nombre' o desde el email (parte antes del @)
+const storedName = localStorage.getItem('nombre');
+const storedEmail = localStorage.getItem('email') || localStorage.getItem('correo') || localStorage.getItem('userEmail');
+
+let userName = 'Nombre de usuario';
+if (storedName) {
+  userName = storedName;
+} else if (storedEmail && storedEmail.includes('@')) {
+  const localPart = storedEmail.split('@')[0];
+  const nameParts = localPart.replace(/[_\.]+/g, ' ').split(' ').filter(Boolean);
+  userName = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+} else {
+  // fallback: mostrar RUT si no hay nombre ni correo
+  const userRut = localStorage.getItem('rut');
+  if (userRut) userName = `RUT: ${userRut}`;
+}
 
 // 2. Leemos el nombre de la carrera
 let careerName = "Carrera del usuario";

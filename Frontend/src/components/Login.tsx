@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react'; // 👈 Se importa useEffect
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import logoUcn from '../recursos/logo-ucn.png';
-import './Login.css';
+import '../styles/Login.css';
 
 const API_BASE_URL = "http://localhost:3000";
 
@@ -11,7 +10,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; api?: string }>({}); // 👈 Objeto para errores específicos
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+
 
   // --- NUEVA FUNCIÓN DE VALIDACIÓN ---
   // Esta función se encarga de todas las restricciones del frontend
@@ -64,9 +63,19 @@ const Login: React.FC = () => {
         setErrors({ api: 'Credenciales incorrectas. Inténtalo de nuevo.' });
       } else {
         console.log('✅ Login exitoso:', data);
-        localStorage.setItem('rut', data.rut);
-        localStorage.setItem('carreras', JSON.stringify(data.carreras));
-        localStorage.setItem('rol', data.rol); // 👈 Esta línea guarda el rol
+        // Guardamos campos esperados en localStorage para que otras pantallas los usen
+        if (data.rut) localStorage.setItem('rut', data.rut);
+        if (data.carreras) localStorage.setItem('carreras', JSON.stringify(data.carreras));
+        if (data.rol) localStorage.setItem('rol', data.rol);
+        // Guardar el correo retornado por la API o, si no viene, el correo ingresado en el formulario
+        const emailFromApi = data.email || data.correo || data.user || data.usuario || data.username || null;
+        if (emailFromApi) {
+          localStorage.setItem('email', emailFromApi);
+        } else if (email) {
+          localStorage.setItem('email', email);
+        }
+        // Guardar nombre si el backend lo devuelve
+        if (data.nombre) localStorage.setItem('nombre', data.nombre);
         window.location.href = '/home';
       }
     } catch (err) {
