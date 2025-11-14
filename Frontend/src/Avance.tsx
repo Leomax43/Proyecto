@@ -34,12 +34,12 @@ const ordinal = (n: number) => {
 const statusClass = (status: string | undefined, type: string | undefined) => {
   const lowerType = (type || '').toLowerCase();
   
-  // 1. Prioridad estricta para CONVALIDACIÓN/REGULARIZACIÓN DE CRÉDITOS
+  // Prioridad estricta para CONVALIDACIÓN/REGULARIZACIÓN DE CRÉDITOS
   if (lowerType.includes('convalidaci') || lowerType.includes('regularizacion de creditos')) {
     return 'status-convalidated'; 
   }
   
-  // 2. Para TODOS los demás tipos (REGULAR, CAMBIO CATALOGO CARRERA, etc.), usamos el STATUS
+  // Para TODOS los demás tipos (REGULAR, CAMBIO CATALOGO CARRERA, etc.), usamos el STATUS
   if (!status) return 'status-unknown';
   const s = status.toLowerCase();
   if (s.includes('aprob')) return 'status-approved';
@@ -161,7 +161,6 @@ const CarreraAvanceBlock: React.FC<{
                         <div className="semester-label">{getSemesterLabel(period)}</div>
                         
                         <div className="semester-courses">
-                          {/* Mapeamos los cursos de byPeriod para ESTE periodo */}
                           {(byPeriod.map[period] || []).map((curso: ApiAvance) => (
                             <div 
                               key={curso.nrc} 
@@ -171,8 +170,8 @@ const CarreraAvanceBlock: React.FC<{
                               <div className="course-name">{getCourseName(curso.course)}</div>
                               <div className="course-status">
                                 {isConvalidated(curso)
-                                  ? 'Convalidado' /* Muestra 'Convalidado' si cumple la regla estricta */
-                                  : curso.status  /* De lo contrario, muestra el STATUS real */
+                                  ? 'Convalidado'
+                                  : curso.status
                                 }
                               </div>
                             </div>

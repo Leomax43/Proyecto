@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import logoUcn from '../recursos/logo-ucn.png';
+import logoUcn from '../assets/logo-ucn.png';
 import '../styles/Login.css';
 
 const API_BASE_URL = "http://localhost:3000";
@@ -16,16 +16,16 @@ const Login: React.FC = () => {
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
 
-    // 1. Restriccion: Email no puede estar vacio
+    // Restriccion: Email no puede estar vacio
     if (!email) {
       newErrors.email = 'El correo electrónico es obligatorio.';
     } 
-    // 2. Restriccion: Email debe tener un formato valido
+    // Restriccion: Email debe tener un formato valido
     else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'Por favor, ingresa un formato de correo válido.';
     }
 
-    // 3. Restriccion: Contraseña no puede estar vacia
+    // Restriccion: Contraseña no puede estar vacia
     if (!password) {
       newErrors.password = 'La contraseña es obligatoria.';
     }
@@ -66,14 +66,12 @@ const Login: React.FC = () => {
         if (data.rut) localStorage.setItem('rut', data.rut);
         if (data.carreras) localStorage.setItem('carreras', JSON.stringify(data.carreras));
         if (data.rol) localStorage.setItem('rol', data.rol);
-        // Guardar el correo retornado por la API o, si no viene, el correo ingresado en el formulario
         const emailFromApi = data.email || data.correo || data.user || data.usuario || data.username || null;
         if (emailFromApi) {
           localStorage.setItem('email', emailFromApi);
         } else if (email) {
           localStorage.setItem('email', email);
         }
-        // Guardar nombre si el backend lo devuelve
         if (data.nombre) localStorage.setItem('nombre', data.nombre);
         window.location.href = '/home';
       }
