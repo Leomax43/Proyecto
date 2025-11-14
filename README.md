@@ -92,7 +92,7 @@ Luego abrir la página:
 | 2    | Instalar backend           | `npm install`            |
 | 3    | Instalar frontend          | `npm install`            |
 | 4    | Actualizar WSL             | `wsl --update`           |
-| 5    | Revisar docker-compose.yml | —                        |
+| 5    | Revisar                    | `docker-compose.yml`     |
 | 6    | Limpiar contenedores       | `docker compose down -v` |
 | 7    | Levantar base de datos     | `docker compose up -d`   |
 | 8    | Ejecutar backend           | `npm run start:dev`      |
