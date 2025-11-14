@@ -1,5 +1,3 @@
-Aquí tienes el **README.md** listo para copiar y pegar en GitHub, con formato limpio y profesional:
-
 ---
 
 # 🖥️ Proyecto – Configuración de PC Nuevo
