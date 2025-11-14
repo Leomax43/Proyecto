@@ -191,7 +191,7 @@ const CarreraAvanceBlock: React.FC<{
 };
 
 
-// --- COMPONENTE PRINCIPAL 'Avance' ---
+// --- COMPONENTE PRINCIPAL ---
 const Avance: React.FC = () => {
   const [avanceByCarrera, setAvanceByCarrera] = useState<Record<string, ApiAvance[]>>({});
   const [apiMalla, setApiMalla] = useState<ApiMalla[]>([]);

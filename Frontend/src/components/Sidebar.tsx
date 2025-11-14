@@ -89,7 +89,7 @@ const Sidebar: React.FC = () => {
             onChange={(e) => setTempAvatarUrl(e.target.value)}
           />
           <div className="avatar-url-actions">
-            <button className="btn small" onClick={() => { setAvatarUrl(tempAvatarUrl || defaultAvatar); setEditingAvatar(false); }}>Guardar</button>
+            <button className="btn small primary" onClick={() => { setAvatarUrl(tempAvatarUrl || defaultAvatar); setEditingAvatar(false); }}>Guardar</button>
             <button className="btn small ghost" onClick={() => { setEditingAvatar(false); setTempAvatarUrl(''); }}>Cancelar</button>
             <button className="btn small danger" onClick={() => { setAvatarUrl(defaultAvatar); setEditingAvatar(false); setTempAvatarUrl(''); }}>Quitar</button>
           </div>

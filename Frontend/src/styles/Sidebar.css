@@ -66,27 +66,60 @@
 }
 
 .avatar-url-input {
-  width: calc(100% - 2rem);
-  margin: 0 1rem 1rem 1rem;
+  width: 240px;
+  margin: 0 auto 1rem auto;
+  padding: 14px;
+  border-radius: 12px;
+  background: #357890;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 12px; /* más espacio limpio */
 }
+
 .avatar-url-input input[type="text"] {
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(0,0,0,0.08);
-  outline: none;
+  border-radius: 3px;
+  border: 1px solid #d7d7d7;
+  background: #fff;
+  color: #222;
+  
 }
+
 .avatar-url-actions {
-  display:flex;
-  gap: 8px;
-  align-items:center;
+  display: flex;
+  width: 100%;
+  justify-content: space-between; /* mejor distribución */
+  align-items: center;
+  margin-top: 4px; /* separa del input */
 }
-.btn.small { padding: 6px 8px; font-size: 0.85rem; }
-.btn.small.ghost { background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #fff; }
-.btn.small.danger { background: #e74c3c; color: #fff; }
+
+.btn.small {
+  padding: 4px 10px;  
+  font-size: 0.8rem;   
+  border-radius: 5px;  
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+/* Guardar */
+.btn.small.primary {
+  background: #f2f2f2;
+  color: #333;
+}
+
+/* Cancelar */
+.btn.small.ghost {
+  background: #f2f2f2;
+  color: #333;
+}
+
+/* Quitar */
+.btn.small.danger {
+  background: #e74c3c;
+  color: #fff;
+}
 
 .sidebar-user-name {
   color: #fff;
