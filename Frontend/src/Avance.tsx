@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import './styles/Avance.css';
 
-// --- Interfaces (sin cambios) ---
+// --- Interfaces ---
 interface ApiAvance {
   nrc: string;
   period: string;
@@ -25,19 +25,12 @@ interface UserCarrera {
   catalogo: string;
 }
 
-// --- Funciones 'util' (sin cambios) ---
-
-const chunk = (arr: any[], size: number) => {
-  const res: any[][] = [];
-  for (let i = 0; i < arr.length; i += size) res.push(arr.slice(i, i + size));
-  return res;
-};
 const ordinal = (n: number) => {
   const map = ['Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo', 'Noveno', 'Décimo'];
   return map[n - 1] || `Año ${n}`;
 };
 
-// --- Lógica de Clase (Corregida de la vez anterior) ---
+// --- Lógica de Clase ---
 const statusClass = (status: string | undefined, type: string | undefined) => {
   const lowerType = (type || '').toLowerCase();
   
@@ -55,7 +48,7 @@ const statusClass = (status: string | undefined, type: string | undefined) => {
   return 'status-unknown';
 };
 
-// --- Helper de Semestres (sin cambios) ---
+// --- Helper de Semestres  ---
 const getSemesterLabel = (period: string) => {
   if (!period || period.length < 6) return `Periodo ${period}`;
   const suffix = period.substring(4);
@@ -76,7 +69,7 @@ const CarreraAvanceBlock: React.FC<{
   getCourseName: (code: string) => string;
 }> = ({ carrera, avanceData, getCourseName }) => {
 
-  // Lógica de agrupación (sin cambios)
+  // Lógica de agrupación
   const byPeriod = useMemo(() => {
     const map: Record<string, ApiAvance[]> = {};
     avanceData.forEach(a => {
@@ -132,7 +125,7 @@ const CarreraAvanceBlock: React.FC<{
     );
   }
 
-  // Helper de texto (sin cambios)
+  // Helper de texto 
   const isConvalidated = (curso: ApiAvance) => {
     const type = curso.inscriptionType.toLowerCase();
     return type.includes('convalidaci') || type.includes('regularizacion de creditos');
@@ -162,9 +155,6 @@ const CarreraAvanceBlock: React.FC<{
 
                 {expandedYears[y.yearIndex] && (
                   <div className="year-content">
-                    
-                    {/* --- 🔴 FIX 1: ELIMINADO EL BUCLE ANIDADO 🔴 --- */}
-                    {/* Ahora solo hay UN bucle y.periods.map */}
                     {y.periods.map(period => (
                       <div key={period} className="semester-row">
                         
@@ -179,23 +169,17 @@ const CarreraAvanceBlock: React.FC<{
                             >
                               <div className="course-code">{curso.course}</div>
                               <div className="course-name">{getCourseName(curso.course)}</div>
-                              
-                              {/* --- 🔴 FIX 2: SINTAXIS DE COMENTARIO 🔴 --- */}
                               <div className="course-status">
                                 {isConvalidated(curso)
                                   ? 'Convalidado' /* Muestra 'Convalidado' si cumple la regla estricta */
                                   : curso.status  /* De lo contrario, muestra el STATUS real */
                                 }
                               </div>
-                              {/* --- Fin Fix 2 --- */}
-                              
                             </div>
                           ))}
                         </div>
                       </div>
                     ))}
-                    {/* --- Fin Fix 1 --- */}
-
                   </div>
                 )}
               </div>
@@ -208,7 +192,7 @@ const CarreraAvanceBlock: React.FC<{
 };
 
 
-// --- COMPONENTE PRINCIPAL 'Avance' (Sin cambios) ---
+// --- COMPONENTE PRINCIPAL 'Avance' ---
 const Avance: React.FC = () => {
   const [avanceByCarrera, setAvanceByCarrera] = useState<Record<string, ApiAvance[]>>({});
   const [apiMalla, setApiMalla] = useState<ApiMalla[]>([]);

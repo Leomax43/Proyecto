@@ -1,16 +1,12 @@
-/* Estilos para la pantalla Home (bienvenida) */
-
-/* 1. Reset Básico y Tipografía Global */
 body {
-  font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; /* Fuente moderna y legible */
+  font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  -webkit-font-smoothing: antialiased; /* Mejora la visualización de fuentes */
+  -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 2. Estructura Principal */
 .home-main {
   display: flex;
   min-height: 100vh;
@@ -18,73 +14,70 @@ body {
 
 .home-content {
   flex: 1;
-  padding: 40px 20px; /* Aumento del padding para más espacio */
-  background: #f7f9fc; /* Fondo más claro y suave */
+  padding: 40px 20px;
+  background: #f7f9fc;
 }
 
 .home-container {
-  max-width: 1100px; /* Un poco más ancho para pantallas grandes */
+  max-width: 1100px;
   margin: 0 auto;
 }
 
-/* 3. Encabezado */
 .home-header {
-  margin-bottom: 30px; /* Más espacio debajo del encabezado */
+  margin-bottom: 30px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #e3e8f0; /* Línea separadora sutil */
+  border-bottom: 1px solid #e3e8f0;
 }
 
 .home-header h1 {
   margin: 0;
-  font-size: 36px; /* Título más prominente */
-  font-weight: 700; /* Negrita */
-  color: #1a3a63; /* Azul oscuro más rico */
+  font-size: 36px;
+  font-weight: 700;
+  color: #1a3a63;
   line-height: 1.2;
 }
 
 .home-header .career {
-  color: #6c7a95; /* Gris azulado para un contraste suave */
+  color: #6c7a95;
   margin-top: 8px;
   font-size: 18px;
   font-weight: 400;
 }
 
-/* 4. Secciones Generales */
 .home-section {
   background: #ffffff;
-  padding: 25px; /* Más padding interno */
-  border-radius: 12px; /* Esquinas más redondeadas */
-  margin-bottom: 30px; /* Más espacio entre secciones */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Sombra suave y elevada */
-  border: 1px solid #f0f4f8; /* Borde muy sutil */
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f4f8;
   color: #1a3a63;
 }
 
-/* 5. Estilo de la Cuadrícula y Tarjetas (Cards) */
 .home-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Más flexible */
-  gap: 20px; /* Más espacio entre tarjetas */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
 }
 
 .home-card {
-  border: none; /* Eliminamos el borde, la sombra lo reemplaza */
+  border: none;
   border-radius: 10px;
   padding: 20px;
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Sombra más definida */
-  transition: transform 0.3s ease, box-shadow 0.3s ease; /* Transición para efecto hover */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   text-decoration: none;
   color: inherit;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 130px; /* Un poco más de altura mínima */
+  min-height: 130px;
 }
 
 .home-card:hover {
-  transform: translateY(-4px); /* Se eleva al pasar el mouse */
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15); /* Sombra más intensa al elevarse */
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
 .home-card h3 {
@@ -96,36 +89,34 @@ body {
 
 .home-card p {
   margin: 0;
-  color: #4a658a; /* Color de párrafo más legible */
+  color: #4a658a;
   line-height: 1.5;
 }
 
-/* 6. Call to Action (CTA) */
 .home-cta {
   margin-top: 15px;
-  color: #007bff; /* Un azul primario estándar */
+  color: #007bff;
   font-weight: 600;
-  display: inline-block; /* Asegura que el color se aplique correctamente */
+  display: inline-block;
 }
 
 .home-cta:after {
-  content: ' →'; /* Flecha sutil para indicar acción */
+  content: ' →';
   display: inline-block;
   margin-left: 5px;
   transition: margin-left 0.3s ease;
 }
 
 .home-card:hover .home-cta:after {
-    margin-left: 8px; /* Movimiento sutil de la flecha al hacer hover */
+  margin-left: 8px;
 }
 
-
-/* 7. Consejos (Tips) */
 .home-tips h4 {
   margin-bottom: 10px;
   font-size: 18px;
   color: #1a3a63;
 }
+
 .home-tips ul {
   margin: 0;
   padding-left: 20px;
@@ -133,16 +124,14 @@ body {
   line-height: 1.6;
 }
 
-/* Responsive: Ajustes en pantallas pequeñas */
 @media (max-width: 768px) {
   .home-content {
-    padding: 30px 15px; /* Menos padding en móviles */
+    padding: 30px 15px;
   }
   .home-header h1 {
     font-size: 30px;
   }
-  /* La cuadrícula ya es flexible con 'auto-fit', pero podemos asegurar una columna */
-  .home-grid { 
-    grid-template-columns: 1fr; 
+  .home-grid {
+    grid-template-columns: 1fr;
   }
 }

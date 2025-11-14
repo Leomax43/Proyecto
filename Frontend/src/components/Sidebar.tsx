@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import '../styles/Sidebar.css';
 
-// --- INTERFAZ para la Carrera (solo para este componente) ---
+// --- INTERFAZ para la Carrera ---
 interface Carrera {
   codigo: string;
   nombre: string;
@@ -29,7 +29,7 @@ if (storedName) {
   if (userRut) userName = `RUT: ${userRut}`;
 }
 
-// 2. Leemos el nombre de la carrera
+// Leemos el nombre de la carrera
 let careerName = "Carrera del usuario";
 const carrerasString = localStorage.getItem('carreras');
 
@@ -41,14 +41,26 @@ if (carrerasString) {
     }
   } catch (error) {
     console.error("Error al parsear carreras en Sidebar:", error);
-    // Dejamos el nombre por defecto
   }
 }
-// --- Fin de la lógica ---
-
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
+
+  const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+  const [avatarUrl, setAvatarUrl] = useState<string>(() => localStorage.getItem('avatarUrl') || defaultAvatar);
+  const [editingAvatar, setEditingAvatar] = useState<boolean>(false);
+  const [tempAvatarUrl, setTempAvatarUrl] = useState<string>('');
+
+  useEffect(() => {
+    // keep localStorage in sync if avatarUrl changes
+    if (avatarUrl && avatarUrl !== defaultAvatar) {
+      localStorage.setItem('avatarUrl', avatarUrl);
+    } else if (avatarUrl === defaultAvatar) {
+      // remove custom avatar when using default
+      localStorage.removeItem('avatarUrl');
+    }
+  }, [avatarUrl]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -58,15 +70,31 @@ const Sidebar: React.FC = () => {
   return (
     <aside className="sidebar">
       <div className="sidebar-profile">
-        <div className="sidebar-avatar">
-          <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="avatar" />
+        <div className="sidebar-avatar" onClick={() => { setTempAvatarUrl(avatarUrl === defaultAvatar ? '' : avatarUrl); setEditingAvatar(true); }} title="Hacer clic para cambiar avatar">
+          <img src={avatarUrl || defaultAvatar} alt="avatar" onError={(e) => { (e.currentTarget as HTMLImageElement).src = defaultAvatar; }} />
+          <div className="avatar-edit-overlay">✎</div>
         </div>
         <div className="sidebar-user-info">
-          {/* 3. Usamos las variables dinámicas */}
           <div className="sidebar-user-name">{userName}</div>
           <div className="sidebar-user-career">{careerName}</div>
         </div>
       </div>
+
+      {editingAvatar && (
+        <div className="avatar-url-input">
+          <input
+            type="text"
+            placeholder="Pegar URL de la imagen"
+            value={tempAvatarUrl}
+            onChange={(e) => setTempAvatarUrl(e.target.value)}
+          />
+          <div className="avatar-url-actions">
+            <button className="btn small" onClick={() => { setAvatarUrl(tempAvatarUrl || defaultAvatar); setEditingAvatar(false); }}>Guardar</button>
+            <button className="btn small ghost" onClick={() => { setEditingAvatar(false); setTempAvatarUrl(''); }}>Cancelar</button>
+            <button className="btn small danger" onClick={() => { setAvatarUrl(defaultAvatar); setEditingAvatar(false); setTempAvatarUrl(''); }}>Quitar</button>
+          </div>
+        </div>
+      )}
 
       <nav className="sidebar-nav">
         <NavLink

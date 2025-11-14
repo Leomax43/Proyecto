@@ -5,28 +5,27 @@ import '../styles/Login.css';
 const API_BASE_URL = "http://localhost:3000";
 
 const Login: React.FC = () => {
-  // Cambiamos 'rut' a 'email' para que sea más claro
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string; api?: string }>({}); // 👈 Objeto para errores específicos
+  const [errors, setErrors] = useState<{ email?: string; password?: string; api?: string }>({});
   const [loading, setLoading] = useState(false);
 
 
-  // --- NUEVA FUNCIÓN DE VALIDACIÓN ---
-  // Esta función se encarga de todas las restricciones del frontend
+  // --- FUNCION DE VALIDACIÓN ---
+  // Esta funcion se encarga de todas las restricciones del frontend
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
 
-    // 1. Restricción: Email no puede estar vacío
+    // 1. Restriccion: Email no puede estar vacio
     if (!email) {
       newErrors.email = 'El correo electrónico es obligatorio.';
     } 
-    // 2. Restricción: Email debe tener un formato válido
+    // 2. Restriccion: Email debe tener un formato valido
     else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'Por favor, ingresa un formato de correo válido.';
     }
 
-    // 3. Restricción: Contraseña no puede estar vacía
+    // 3. Restriccion: Contraseña no puede estar vacia
     if (!password) {
       newErrors.password = 'La contraseña es obligatoria.';
     }
@@ -62,7 +61,7 @@ const Login: React.FC = () => {
         // Muestra el error de la API
         setErrors({ api: 'Credenciales incorrectas. Inténtalo de nuevo.' });
       } else {
-        console.log('✅ Login exitoso:', data);
+        console.log('Login exitoso:', data);
         // Guardamos campos esperados en localStorage para que otras pantallas los usen
         if (data.rut) localStorage.setItem('rut', data.rut);
         if (data.carreras) localStorage.setItem('carreras', JSON.stringify(data.carreras));
@@ -103,9 +102,8 @@ const Login: React.FC = () => {
             onChange={e => setEmail(e.target.value)}
             placeholder="Ej: juan.perez@alumnos.ucn.cl"
             className="login-input"
-            aria-label="Correo electrónico" // 👈 Accesibilidad para pruebas
+            aria-label="Correo electrónico"
           />
-          {/* Muestra el error específico del email */}
           {errors.email && <div className="login-error">{errors.email}</div>}
 
 
@@ -115,12 +113,9 @@ const Login: React.FC = () => {
             value={password}
             onChange={e => setPassword(e.target.value)}
             className="login-input"
-            aria-label="Contraseña" // 👈 Accesibilidad para pruebas
+            aria-label="Contraseña"
           />
-          {/* Muestra el error específico de la contraseña */}
           {errors.password && <div className="login-error">{errors.password}</div>}
-
-          {/* Muestra el error general de la API */}
           {errors.api && <div className="login-error">{errors.api}</div>}
 
           <button type="submit" className="login-btn" disabled={loading}>

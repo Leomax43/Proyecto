@@ -1,4 +1,3 @@
-/* Styles for Proyecciones page - similar look to Avance */
 .proyecciones-main {
   flex: 1;
   padding: 20px 28px;
@@ -34,7 +33,7 @@
 .empty-state { padding: 28px; background: #fff; border-radius: 8px; text-align: center; color: #666; }
 
 .proj-head { display:flex; justify-content: space-between; align-items:center; gap:12px; margin-bottom: 12px; }
-.proj-title-input { font-size: 1.2rem; padding: 6px 8px; border-radius: 6px; border: 1px solid #ccc; flex: 1; }
+.proj-title-input { font-size: 1.2rem; padding: 6px 8px; border-radius: 6px; border: 1px solid #ccc; flex: 1; background-color: white; color: #3d3d3d}
 .proj-controls .btn { margin-left: 8px; }
 
 .years-list { display:flex; flex-direction: column; gap: 14px; }
@@ -47,17 +46,14 @@
 .semester-courses { display:flex; gap: 10px; flex-wrap: wrap; }
 
 .avance-course { background: #fff; border-radius: 8px; padding: 8px 10px; min-width: 120px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display:flex; flex-direction:column; gap:6px; cursor:pointer; }
-.avance-course .course-code { font-weight:700; font-size: 13px; color:#123; }
-.avance-course .course-status { font-size: 12px; color:#555; }
 
 .avance-course.status-aprobado { border-left: 6px solid #2d9d5b; }
 .avance-course.status-reprobado { border-left: 6px solid #e74c3c; }
 .avance-course.status-inscrito { border-left: 6px solid #f39c12; }
 .avance-course.status-planificado { border-left: 6px solid #95a5a6; }
 
-/* simple button styles used here */
 .btn { padding: 8px 10px; border-radius: 6px; border: none; background: #1e5972; cursor: pointer; }
-.btn.primary { background: #ffb357; color: #fff; font-weight: 700; }
+.btn.primary { background: #f39c12; color: #fff; font-weight: 700; }
 .btn.danger { background: #e74c3c; color: #fff; }
 
 @media (max-width: 900px) {

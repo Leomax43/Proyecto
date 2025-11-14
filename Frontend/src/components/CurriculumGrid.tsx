@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-// --- 1. DEFINICIÓN DE TIPOS (Sin cambios) ---
+// --- DEFINICIÓN DE TIPOS ---
 export interface ApiCurso {
   codigo: string;
   asignatura: string;
@@ -30,13 +30,8 @@ export type CurriculumGridProps = {
   carrera?: string;
 };
 
-
-
-// --- FIN DE TIPOS ---
-
 const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 
-// -- Leer nombre de la carrera desde localStorage (mismo enfoque que en Sidebar.tsx)
 let careerNameFromStorage = 'Malla de carrera usuario';
 const carrerasString = localStorage.getItem('carreras');
 if (carrerasString) {
@@ -46,7 +41,6 @@ if (carrerasString) {
       careerNameFromStorage = typeof carrerasParsed[0] === 'string' ? carrerasParsed[0] : carrerasParsed[0].nombre || careerNameFromStorage;
     }
   } catch (e) {
-    // si no es JSON, usar el valor tal cual
     careerNameFromStorage = carrerasString;
   }
 }
@@ -73,7 +67,6 @@ const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses, 
               <div
                 key={curso.codigo}
                 className="course-card"
-                // Eventos (sin cambios)
                 onMouseEnter={() => setHoveredCourse(curso)}
                 onMouseLeave={() => setHoveredCourse(null)}
               >
@@ -87,20 +80,12 @@ const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses, 
         ))}
       </div>
 
-      {/* --- 4. RENDERIZADO DEL TOOLTIP (ACTUALIZADO) --- */}
-      {/* CAMBIO: Ahora el tooltip aparece SIEMPRE que hoveredCourse exista,
-        no solo si tiene prerrequisitos.
-      */}
       {hoveredCourse && (
         <div className="prereq-tooltip">
           <div className="prereq-title">Prerrequisitos para:</div>
           <div className="prereq-course-name">{hoveredCourse.nombre}</div>
           <hr />
           
-          {/* CAMBIO: Verificamos si 'prereq' tiene contenido (no es un string vacío).
-            Si tiene, mostramos la lista.
-            Si está vacío, mostramos "Sin Pre-Requisitos".
-          */}
           {hoveredCourse.prereq ? (
             <ul>
               {hoveredCourse.prereq.split(',').map((codigo) => (
@@ -108,7 +93,6 @@ const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses, 
               ))}
             </ul>
           ) : (
-            // ¡NUEVO! Mensaje para cursos sin prerrequisitos
             <div className="prereq-none">Sin Pre-Requisitos</div>
           )}
         </div>

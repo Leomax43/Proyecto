@@ -33,13 +33,60 @@
   margin-bottom: 2rem;
 }
 
-.sidebar-avatar img {
+.sidebar-avatar {
+  position: relative;
   width: 90px;
   height: 90px;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+}
+.sidebar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   border-radius: 50%;
   background: #fff;
-  margin-bottom: 1rem;
+  display: block;
+  border: 3px solid rgba(255,255,255,0.12);
 }
+.avatar-edit-overlay {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius: 50%;
+  font-size: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+.avatar-url-input {
+  width: calc(100% - 2rem);
+  margin: 0 1rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.avatar-url-input input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.08);
+  outline: none;
+}
+.avatar-url-actions {
+  display:flex;
+  gap: 8px;
+  align-items:center;
+}
+.btn.small { padding: 6px 8px; font-size: 0.85rem; }
+.btn.small.ghost { background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #fff; }
+.btn.small.danger { background: #e74c3c; color: #fff; }
 
 .sidebar-user-name {
   color: #fff;

@@ -6,11 +6,11 @@ import "./styles/HomeScreen.css";
 import { Link } from "react-router-dom";
 
 function HomeScreen() {
-  // Mostrar nombre extraído del correo si está disponible (p. ej. pedrito@example.com -> Pedrito)
+  // Mostrar nombre extraído del correo
   const userRut = localStorage.getItem("rut");
   const possibleEmailKeys = ["email", "correo", "userEmail", "usuario", "user", "username"];
   let userName = "Usuario";
-  // buscar un valor tipo email en localStorage
+  // buscar un valor tipo email
   let foundEmail: string | null = null;
   for (const k of possibleEmailKeys) {
     const v = localStorage.getItem(k);

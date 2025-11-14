@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react"; 
 import { useNavigate } from "react-router-dom";
 import CurriculumGrid from "./components/CurriculumGrid";
-// 1. IMPORTANTE: 'Semester' se actualizará, pero la definición está en CurriculumGrid.tsx
 import type { Semester, CursoGrid } from "./components/CurriculumGrid"; 
 import "./styles/CurriculumGrid.css";
 import Sidebar from "./components/Sidebar";
 import "./styles/Sidebar.css";
 
 // --- INTERFACES ---
-// 'ApiCurso' sigue igual (lo que viene del backend)
 interface ApiCurso {
   codigo: string;
   asignatura: string;
@@ -17,30 +15,27 @@ interface ApiCurso {
   prereq: string;
 }
 
-// 'Carrera' del localStorage sigue igual
 interface Carrera {
   codigo: string;
   nombre: string;
   catalogo: string;
 }
-// --- FIN INTERFACES ---
 
-
-// --- FUNCIÓN TRADUCTORA (ACTUALIZADA) ---
+// --- FUNCIÓN TRADUCTORA ---
 const transformarApiASemestres = (apiData: ApiCurso[]): Semester[] => {
   const grupos = new Map<number, CursoGrid[]>();
 
   apiData.forEach(apiCurso => {
     const nivel = apiCurso.nivel;
     
-    // 2. "Traduce" el formato: AÑADIMOS 'prereq'
+    // "Traduce" el formato: AÑADIMOS 'prereq'
     const cursoGrid: CursoGrid = {
       codigo: apiCurso.codigo,
       nombre: apiCurso.asignatura,
       creditos: apiCurso.creditos,
       notaFinal: null, 
       intentos: 1,
-      prereq: apiCurso.prereq // <-- ¡CAMBIO IMPORTANTE!
+      prereq: apiCurso.prereq
     };
 
     if (!grupos.has(nivel)) {
@@ -58,12 +53,9 @@ const transformarApiASemestres = (apiData: ApiCurso[]): Semester[] => {
     
   return semestres;
 }
-// --- FIN FUNCIÓN TRADUCTORA ---
-
 
 function Malla() {
   const [semestres, setSemestres] = useState<Semester[]>([]);
-  // 3. NUEVO ESTADO: para guardar la lista plana de cursos
   const [allCourses, setAllCourses] = useState<ApiCurso[]>([]); 
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -106,10 +98,10 @@ function Malla() {
           throw new Error('La API no devolvió una malla de cursos válida.');
         }
         
-        // 4. Guardamos la lista plana de cursos en el nuevo estado
+        // Guardamos la lista plana de cursos en el nuevo estado
         setAllCourses(dataApi as ApiCurso[]); 
 
-        // 5. La función "traductora" usará 'dataApi'
+        // La función "traductora" usará 'dataApi'
         const semestresFormateados = transformarApiASemestres(dataApi as ApiCurso[]);
         setSemestres(semestresFormateados);
 
@@ -123,7 +115,7 @@ function Malla() {
     fetchMallaData();
   }, [navigate]);
 
-  // --- RENDERIZADO (ACTUALIZADO) ---
+  // --- RENDERIZADO ---
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar />
@@ -141,8 +133,6 @@ function Malla() {
             <p>Asegúrate de que el servidor backend esté corriendo en `localhost:3000`</p>
           </div>
         )}
-
-        {/* 6. Pasamos 'allCourses' como prop al Grid */}
         {!isLoading && !error && (
           <CurriculumGrid semestres={semestres} allCourses={allCourses} />
         )}

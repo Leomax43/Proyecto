@@ -1,4 +1,3 @@
-/* Styles for Avance view (prototype) */
 .avance-container {
   padding: 10px 30px;
   background-color: #f5f7fa;
@@ -9,14 +8,12 @@
   color: #002b5c;
 }
 
-/* --- NUEVO: Contenedor de Carreras --- */
 .carreras-list {
   display: flex;
   flex-direction: column;
-  gap: 24px; /* Espacio entre bloques de carrera */
+  gap: 24px;
 }
 
-/* --- NUEVO: Bloque de Carrera (Contenedor principal) --- */
 .carrera-block {
   border: 1px solid #cddde2;
   border-radius: 8px;
@@ -25,9 +22,8 @@
   overflow: hidden;
 }
 
-/* --- NUEVO: Encabezado de Carrera --- */
 .carrera-header {
-  background: #002b5c; /* Color principal oscuro */
+  background: #183a5a;
   color: #fff;
   padding: 16px 20px;
   display: flex;
@@ -54,34 +50,25 @@
   border-radius:50%; 
 }
 
-/* Contenido dentro de la carrera (donde van los años) */
 .carrera-content {
   padding: 20px;
   background: #fdfdfd;
 }
 
-/* --- FIN NUEVOS ESTILOS DE CARRERA --- */
-
-
-/* Lista de Años (sin cambios) */
 .years-list {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-/* --- AJUSTADO: Bloque de Año --- */
-/* Ahora el bloque de año está DENTRO de la carrera, 
-   así que le quitamos la sombra y el fondo blanco */
 .year-block {
-  background: #fff; /* Sigue siendo blanco */
-  border: 1px solid #e0e0e0; /* Un borde más suave */
+  background: #fff; 
+  border: 1px solid #e0e0e0; 
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05); /* Sombra más sutil */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
   overflow: hidden;
 }
 
-/* Encabezado de Año (sin cambios) */
 .year-header {
   background: #1e5972;
   color: #fff;
@@ -90,7 +77,6 @@
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  /* border-bottom: 4px solid rgba(255, 0, 0, 0.08); */ /* quitado */
 }
 .year-title { font-weight: 700; font-size: 18px; }
 .year-toggle { 
@@ -104,10 +90,8 @@
   border-radius:50%; 
 }
 
-/* Contenido del Año (sin cambios) */
 .year-content { padding: 18px; }
 
-/* Fila de Semestre (sin cambios) */
 .semester-row {
   display: grid;
   grid-template-columns: 160px 1fr;
@@ -131,52 +115,60 @@
   align-items: flex-start;
 }
 
-/* Tarjeta de Curso (ajustada) */
 .avance-course { 
   background: #fff; 
   border-radius: 8px; 
-  padding: 10px 12px; 
-  min-width: 140px;
+  padding: 8px 10px; 
+  width: 160px; 
+  min-width: 130px;
+  min-height: 70px; 
+  box-sizing: border-box;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08); 
   display:flex; 
   flex-direction:column; 
   gap: 4px; 
+  justify-content: space-between; 
 }
 .avance-course .course-code { 
-  font-weight:700; 
-  font-size: 13px; 
-  color:#123; 
+  font-weight:500; 
+  font-size: 10px; 
+  color:#6b6b6b; 
+  white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .avance-course .course-name {
-  font-weight: 500;
-  font-size: 14px;
-  color: #333;
+  font-weight: 700;
+  font-size: 12px;
+  color: #222;
   line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  display: block;
+  flex-grow: 1;
 }
 .avance-course .course-status { 
-  font-size: 12px; 
-  color:#555; 
-  margin-top: 4px;
+  font-size: 10px; 
+  color:#6b6b6b; 
+  margin-top: 2px;
   text-transform: capitalize; 
+  font-weight: 400;
 }
 
-/* --- Colores de Estado (¡ACTUALIZADO!) --- */
 .avance-course.status-approved { border-left: 6px solid #2d9d5b; }
 .avance-course.status-failed { border-left: 6px solid #e74c3c; }
 .avance-course.status-enrolled { border-left: 6px solid #f39c12; }
 .avance-course.status-unknown { border-left: 6px solid #95a5a6; }
 
-/* --- ¡NUEVO ESTADO DE CONVALIDACIÓN! --- */
 .avance-course.status-convalidated { 
-  border-left: 6px solid #3498db; /* Azul distintivo */
+  border-left: 6px solid #3498db;
 }
 .avance-course.status-convalidated .course-status {
-  color: #2980b9; /* Color de texto que coincide */
+  color: #2980b9; 
   font-weight: 700;
 }
 
-
-/* responsive (sin cambios) */
 @media (max-width: 900px) {
   .semester-label { min-width: 90px; font-size: 13px; }
   .avance-course { min-width: 120px; padding:8px; }
