@@ -129,5 +129,3 @@ Email: `ximena@example.com`
 Pass: `qwerty`
 
 ---
-
-Si quieres, puedo agregar imágenes, diagramas o mejorar el formato.
