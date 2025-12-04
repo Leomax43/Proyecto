@@ -96,7 +96,7 @@ const Proyecciones: React.FC = () => {
   // --- Malla / cursos disponibles ---
   const [allCourses, setAllCourses] = useState<ApiCurso[]>([]);
   const [coursesLoading, setCoursesLoading] = useState<boolean>(false);
-  const [coursesError, setCoursesError] = useState<string | null>(null);
+  const [, setCoursesError] = useState<string | null>(null);
   const [allAvance, setAllAvance] = useState<ApiAvance[]>([]);
   const [, setAvanceLoading] = useState<boolean>(false);
 
@@ -158,24 +158,7 @@ const Proyecciones: React.FC = () => {
   }, []);
 
   // Computar ramos no cursados: consideramos como "cursados" solo los que estén APROBADO en la proyección o avance
-  const notTakenCourses = useMemo(() => {
-    if (!allCourses || allCourses.length === 0) return [] as ApiCurso[];
-    // Consider as "taken" only APROBADO; VACANTE and REPROBADO remain available as options
-    const takenStatuses = new Set(['APROBADO']);
-    const takenCodes = new Set<string>();
-    proyecciones.forEach(p => p.years.forEach(y => y.semesters.forEach(s => s.courses.forEach(c => {
-      if (c.code && c.status && takenStatuses.has((c.status || '').toUpperCase())) takenCodes.add((c.code || '').trim());
-    }))));
-    // also include approved/convalidated/enrolled courses from avance (backend)
-    allAvance.forEach(a => {
-      const st = (a.status || '').toLowerCase();
-      const it = (a.inscriptionType || '').toLowerCase();
-      if (st.includes('aprob') || st.includes('inscrit') || it.includes('convalidaci') || it.includes('regularizacion')) {
-        if (a.course) takenCodes.add(a.course.trim());
-      }
-    });
-    return allCourses.filter(c => !takenCodes.has(c.codigo));
-  }, [allCourses, proyecciones, allAvance]);
+  // Manual not-taken list removed — we keep course data for simulation but no longer expose the manual list
 
   // --- Sugerencias automáticas por semestre ---
   const suggestedProjectionView = useMemo(() => {
@@ -480,36 +463,7 @@ const Proyecciones: React.FC = () => {
     }));
   }, [suggestedProjectionView, selected, allCourses]);
 
-  // Selección destino para agregar ramos
-  const [targetYearIndex, setTargetYearIndex] = useState<number>(0);
-  const [targetSemIdx, setTargetSemIdx] = useState<number>(0);
-
-  const addCourseToProjection = (projId: string, yearIndex: number, semIdx: number, course: ApiCurso) => {
-    setProyecciones(prev => prev.map(p => {
-      if (p.id !== projId) return p;
-      const years = p.years.map(y => {
-        if (y.yearIndex !== yearIndex) return y;
-        const semesters = y.semesters.map((s, si) => {
-          if (si !== semIdx) return s;
-          // Try to fill first empty slot (code === ''), otherwise push new
-          let filled = false;
-          const courses = s.courses.map(c => {
-            if (!filled && (!c.code || c.code.trim() === '')) {
-              filled = true;
-              return { ...c, code: course.codigo, status: 'VACANTE' };
-            }
-            return c;
-          });
-            if (!filled) {
-            courses.push({ id: makeId(), code: course.codigo, status: 'VACANTE' });
-          }
-          return { ...s, courses };
-        });
-        return { ...y, semesters };
-      });
-      return { ...p, years };
-    }));
-  };
+  // Manual "Ramos no cursados" UI removed per request; additions are done via automatic suggestions.
 
   // Toggle by code or id. If course exists in the projection, toggle its status.
   // If not found, add it to the target semester with initial status 'VACANTE'.
@@ -644,45 +598,7 @@ const Proyecciones: React.FC = () => {
                       />
                     ))}
                   </div>
-                  <div className="not-taken-section">
-                    <h3>Ramos no cursados</h3>
-                    {coursesLoading && <div>Cargando ramos disponibles...</div>}
-                    {coursesError && <div style={{ color: 'red' }}>Error: {coursesError}</div>}
-                    {!coursesLoading && !coursesError && (
-                      <div className="not-taken-list">
-                        {notTakenCourses.length === 0 && <div>Todos los ramos aparecen como cursados o no hay malla disponible.</div>}
-
-                        {selected && (
-                          <div className="add-target-controls" style={{ marginBottom: '0.5rem' }}>
-                            <label style={{ marginRight: '0.5rem' }}>Agregar a:</label>
-                            <select value={String(targetYearIndex)} onChange={e => { const v = parseInt(e.target.value, 10); setTargetYearIndex(v); setTargetSemIdx(0); }}>
-                              {selected.years.map(y => (
-                                <option key={y.yearIndex} value={String(y.yearIndex)}>{y.title || (y.yearIndex === 0 ? 'Año Actual' : `Año ${y.yearIndex}`)}</option>
-                              ))}
-                            </select>
-                            <select value={String(targetSemIdx)} onChange={e => setTargetSemIdx(parseInt(e.target.value, 10))} style={{ marginLeft: '0.5rem' }}>
-                              {(selected.years.find(y => y.yearIndex === targetYearIndex)?.semesters || []).map((s, si) => (
-                                <option key={si} value={String(si)}>{s.label}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        {notTakenCourses.slice(0, 50).map(c => (
-                          <div key={c.codigo} className="not-taken-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div><strong>{c.codigo}</strong>: {c.asignatura}</div>
-                            {selected ? (
-                              <div>
-                                <button className="btn" onClick={() => addCourseToProjection(selected.id, targetYearIndex, targetSemIdx, c)}>Agregar</button>
-                              </div>
-                            ) : (
-                              <div style={{ color: '#666' }}>Selecciona una proyección</div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  {/* Manual additions removed — UI now shows only automatic suggestions */}
                 </div>
               )}
             </section>
