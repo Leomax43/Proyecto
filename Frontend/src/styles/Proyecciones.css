@@ -50,7 +50,7 @@
 .avance-course.status-aprobado { border-left: 6px solid #2d9d5b; }
 .avance-course.status-reprobado { border-left: 6px solid #e74c3c; }
 .avance-course.status-inscrito { border-left: 6px solid #f39c12; }
-.avance-course.status-planificado { border-left: 6px solid #95a5a6; }
+.avance-course.status-vacante { border-left: 6px solid #7f8c8d; }
 
 .btn { padding: 8px 10px; border-radius: 6px; border: none; background: #1e5972; cursor: pointer; }
 .btn.primary { background: #f39c12; color: #fff; font-weight: 700; }

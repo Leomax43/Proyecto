@@ -6,7 +6,8 @@ type Props = {
   year: YearSim;
   expanded: boolean;
   onToggle: (yearIndex: number) => void;
-  onToggleCourse: (yearIndex: number, semIdx: number, courseId: string) => void;
+  onToggleCourse: (yearIndex: number, semIdx: number, courseKey: string) => void;
+  getCourseName?: (code: string) => string;
 };
 
 const YearBlock: React.FC<Props> = ({ year, expanded, onToggle, onToggleCourse }) => {
@@ -23,9 +24,13 @@ const YearBlock: React.FC<Props> = ({ year, expanded, onToggle, onToggleCourse }
             <div key={si} className="semester-row">
               <div className="semester-label">{s.label}</div>
               <div className="semester-courses">
-                {s.courses.map(c => (
-                  <CourseBox key={c.id} box={c} onClick={(id) => onToggleCourse(year.yearIndex, si, id)} />
-                ))}
+                {s.courses.map(c => {
+                  const name = (typeof (c as any).name === 'string') ? (c as any).name : (undefined as string | undefined);
+                  const box = name ? { ...c, name } : c;
+                  return (
+                    <CourseBox key={c.id} box={box} onClick={(key) => onToggleCourse(year.yearIndex, si, key)} />
+                  );
+                })}
               </div>
             </div>
           ))}

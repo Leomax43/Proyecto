@@ -1,7 +1,7 @@
 
 import "./styles/CurriculumGrid.css";
 import Sidebar from "./components/Sidebar";
-  import "./styles/Sidebar.css";
+import "./styles/Sidebar.css";
 import "./styles/HomeScreen.css";
 import { Link } from "react-router-dom";
 
