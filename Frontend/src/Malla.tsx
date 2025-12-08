@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react"; 
 import { useNavigate } from "react-router-dom";
 import CurriculumGrid from "./components/CurriculumGrid";
-import type { Semester, CursoGrid } from "./components/CurriculumGrid"; 
+import type { Semester } from "./components/CurriculumGrid"; 
 import "./styles/CurriculumGrid.css";
 import Sidebar from "./components/Sidebar";
 import "./styles/Sidebar.css";
+import { apiGet } from "./config/api";
 
 // --- INTERFACES ---
 interface ApiCurso {
@@ -19,39 +20,6 @@ interface Carrera {
   codigo: string;
   nombre: string;
   catalogo: string;
-}
-
-// --- FUNCIÓN TRADUCTORA ---
-const transformarApiASemestres = (apiData: ApiCurso[]): Semester[] => {
-  const grupos = new Map<number, CursoGrid[]>();
-
-  apiData.forEach(apiCurso => {
-    const nivel = apiCurso.nivel;
-    
-    // "Traduce" el formato: AÑADIMOS 'prereq'
-    const cursoGrid: CursoGrid = {
-      codigo: apiCurso.codigo,
-      nombre: apiCurso.asignatura,
-      creditos: apiCurso.creditos,
-      notaFinal: null, 
-      intentos: 1,
-      prereq: apiCurso.prereq
-    };
-
-    if (!grupos.has(nivel)) {
-      grupos.set(nivel, []);
-    }
-    grupos.get(nivel)!.push(cursoGrid);
-  });
-
-  const semestres: Semester[] = Array.from(grupos.entries())
-    .sort((a, b) => a[0] - b[0])
-    .map(([nivel, cursos]) => ({
-      numero: nivel,
-      cursos: cursos
-    }));
-    
-  return semestres;
 }
 
 function Malla() {
@@ -82,27 +50,42 @@ function Malla() {
         const carreraActual = carreras[0]; 
         const codigo = carreraActual.codigo;
         const catalogo = carreraActual.catalogo;
+        const rut = localStorage.getItem('rut');
         
-        const url = `http://localhost:3000/ucn/malla?codigo=${codigo}&catalogo=${catalogo}`;
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error('Error al obtener la malla del backend (response no ok)');
-        }
+        // Use new formatted endpoint that returns structured data with optional student status
+        const rutParam = rut ? `?rut=${encodeURIComponent(rut)}` : '';
+        const formattedData = await apiGet(`/ucn/malla/${encodeURIComponent(codigo)}/${encodeURIComponent(catalogo)}/formatted${rutParam}`);
 
-        const dataApi = await response.json(); 
-
-        if (!Array.isArray(dataApi)) {
-          console.error("La API no devolvió un array:", dataApi);
+        if (!formattedData || !Array.isArray(formattedData.semestres)) {
+          console.error("La API no devolvió datos formateados válidos:", formattedData);
           throw new Error('La API no devolvió una malla de cursos válida.');
         }
-        
-        // Guardamos la lista plana de cursos en el nuevo estado
-        setAllCourses(dataApi as ApiCurso[]); 
 
-        // La función "traductora" usará 'dataApi'
-        const semestresFormateados = transformarApiASemestres(dataApi as ApiCurso[]);
+        // Extract flat course list for filtering/search
+        const flatCourses: ApiCurso[] = formattedData.semestres.flatMap((sem: any) =>
+          sem.cursos.map((c: any) => ({
+            codigo: c.codigo,
+            asignatura: c.nombre,
+            creditos: c.creditos,
+            nivel: sem.nivel,
+            prereq: c.prereqs?.join(',') || '',
+          }))
+        );
+        setAllCourses(flatCourses);
+
+        // Convert backend format to frontend Semester format
+        const semestresFormateados: Semester[] = formattedData.semestres.map((sem: any) => ({
+          numero: sem.nivel,
+          cursos: sem.cursos.map((c: any) => ({
+            codigo: c.codigo,
+            nombre: c.nombre,
+            creditos: c.creditos,
+            prereq: c.prereqs?.join(',') || '',
+            notaFinal: null,
+            intentos: 1,
+            status: c.status || undefined,
+          })),
+        }));
         setSemestres(semestresFormateados);
 
       } catch (err) {

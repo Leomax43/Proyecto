@@ -9,7 +9,7 @@ export const makeEmptySemester = (label = 'Primer Semestre'): SemesterSim => ({
 
 export const makeDefaultProjection = (title = 'Proyección nueva'): Projection => {
   const years: YearSim[] = [];
-  years.push({ yearIndex: 0, semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')], title: 'Año Actual' });
+  years.push({ yearIndex: 0, semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')], title: 'Semestre Actual' });
   years.push({ yearIndex: 1, semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')], title: 'Año Simulado 1' });
   years.push({ yearIndex: 2, semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')], title: 'Año Simulado 2' });
   return { id: makeId(), title, createdAt: Date.now(), years };

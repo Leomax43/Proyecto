@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Param } from '@nestjs/common';
 // 1. Importamos el SERVICIO
 import { UcnService } from './ucn.service';
 
@@ -19,7 +19,17 @@ export class UcnController {
     return this.ucnService.login(email, password);
   }
 
-  // 4. Endpoint de Malla
+  // 6. Endpoint de Malla Formateada (estructura por semestres) - DEBE IR PRIMERO
+  @Get('malla/:codigo/:catalogo/formatted')
+  async getMallaFormatted(
+    @Param('codigo') codigo: string,
+    @Param('catalogo') catalogo: string,
+    @Query('rut') rut?: string,
+  ) {
+    return this.ucnService.getMallaFormatted(codigo, catalogo, rut);
+  }
+
+  // 4. Endpoint de Malla (genérico)
   @Get('malla')
   async getMalla(
     @Query('codigo') codigo: string,
@@ -28,7 +38,16 @@ export class UcnController {
     return this.ucnService.getMalla(codigo, catalogo);
   }
 
-  // 5. Endpoint de Avance
+  // 7. Endpoint de Avance Resumen - DEBE IR PRIMERO
+  @Get('avance/:rut/summary')
+  async getAvanceSummary(
+    @Param('rut') rut: string,
+    @Query('carreras') carrerasJson?: string,
+  ) {
+    return this.ucnService.getAvanceSummary(rut, carrerasJson);
+  }
+
+  // 5. Endpoint de Avance (genérico)
   @Get('avance')
   async getAvance(
     @Query('rut') rut: string,

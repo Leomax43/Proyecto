@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UcnController } from './ucn/ucn.controller';
 import { UsersController } from './users/users.controller';
-import { UcnService } from './ucn/ucn.service';
 import { HttpModule } from '@nestjs/axios';
+import { ProyeccionesModule } from './proyecciones/proyecciones.module';
+import { UcnModule } from './ucn/ucn.module';
 
 // 1. ¡ASEGÚRATE DE QUE ESTA LÍNEA EXISTA!
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -13,6 +13,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
     HttpModule,
+    UcnModule,
+    ProyeccionesModule,
 
     // 2. Cargar el ConfigModule
     ConfigModule.forRoot({
@@ -43,7 +45,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
     }),
   ],
-  controllers: [AppController, UsersController, UcnController],
-  providers: [AppService, UcnService],
+  controllers: [AppController, UsersController],
+  providers: [AppService],
 })
 export class AppModule {}
