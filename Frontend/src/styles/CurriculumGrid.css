@@ -45,63 +45,8 @@
   border-left: 6px solid transparent;
 }
 
-.course-card {
-  background: #fff;
-  border-left: 6px solid #2d9d5b;
-  margin-bottom: 6px;
-  padding: 5px;
-  border-radius: 7px;
-  font-size: 0.98rem;
-  line-height: 1.3;
-  display: grid;
-  gap: 2px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  grid-template-areas:
-    "codigo codigo"
-    "nombre nombre"
-    "nf creditos";
-    width: 100%;
-    min-height: 60px;
-    max-width: 100%;
-  transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
-}
-.course-card:hover {
-  background: #f0f9f5;
-  transform: translateY(-2px); 
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.course-code {
-  grid-area: codigo;
-  font-size: 10px;
-  color: #222;
-  text-align: right;
-}
-
-.course-name {
-  font-size: 11px;
-  font-weight: 500;
-  color: #222;
-  min-height: 3em;
-  display: flex;
-  align-items: center;
-  line-height: 1.1;
-  word-break: break-word;
-}
-
-.course-nf {
-  grid-area: nf;
-  color: #222;
-  font-size: 10px;
-  text-align: left;
-}
-
-.course-creditos {
-  grid-area: creditos;
-  color: #222;
-  font-size: 10px;
-  text-align: right;
-}
+/* Base course card styles moved to `src/components/course/course-card.css`.
+   Keep curriculum-specific layout and tooltip styles here. */
 
 
 .prereq-tooltip {
@@ -159,3 +104,10 @@
   text-align: center;
   padding: 10px 0;
 }
+
+/* Status color helpers for CourseCard */
+.course-card.status-aprobado { --course-border-color: #2d9d5b; }
+.course-card.status-reprobado { --course-border-color: #e74c3c; }
+.course-card.status-inscrito { --course-border-color: #f39c12; }
+.course-card.status-vacante { --course-border-color: #7f8c8d; }
+.course-card.status-convalidated { --course-border-color: #3498db; }

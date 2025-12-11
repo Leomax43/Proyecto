@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import CourseCard from './course/CourseCard';
+import { normalizeStatus } from '../utils/statusHelpers';
 
 // --- DEFINICIÓN DE TIPOS ---
 export interface ApiCurso {
@@ -16,6 +18,7 @@ export type CursoGrid = {
   creditos: number;
   intentos: number;
   prereq: string;
+  status?: string;
 };
 
 export type Semester = {
@@ -46,15 +49,31 @@ if (carrerasString) {
 }
 
 // --- INICIO DEL COMPONENTE ---
+const normalizeCode = (code?: string) => (code || '').trim().toUpperCase();
+
 const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses, carrera }) => {
   const [hoveredCourse, setHoveredCourse] = useState<CursoGrid | null>(null);
 
-  const findCourseName = (codigo: string): string => {
-    const course = allCourses.find(c => c.codigo.trim() === codigo.trim());
-    return course ? course.asignatura : codigo;
+  const findCourseName = (codigo: string): string | null => {
+    const normalized = normalizeCode(codigo);
+    if (!normalized) return null;
+    const course = allCourses.find((c) => normalizeCode(c.codigo) === normalized);
+    const name = (course?.asignatura || '').trim();
+    return name || null;
+  };
+
+  const buildPrereqEntries = (curso: CursoGrid) => {
+    if (!curso.prereq) return [] as Array<{ code: string; name: string }>;
+    return curso.prereq
+      .split(',')
+      .map((codigo) => codigo.trim())
+      .filter(Boolean)
+      .map((codigo) => ({ code: codigo, name: findCourseName(codigo) }))
+      .filter((entry): entry is { code: string; name: string } => !!entry.name);
   };
 
   const title = carrera ? `Malla curricular - ${carrera}` : `Malla curricular - ${careerNameFromStorage}`;
+  const hoveredPrereqEntries = hoveredCourse ? buildPrereqEntries(hoveredCourse) : [];
 
   return (
     <div className="curriculum-main">
@@ -63,19 +82,22 @@ const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses, 
         {semestres.map((sem, idx) => (
           <div key={sem.numero ?? idx} className="semester-column">
             <div className="semester-header">{sem.headerLabel ?? romanNumerals[sem.numero - 1]}</div>
-            {sem.cursos.map((curso) => (
-              <div
-                key={curso.codigo}
-                className="course-card"
-                onMouseEnter={() => setHoveredCourse(curso)}
-                onMouseLeave={() => setHoveredCourse(null)}
-              >
-                <div className="course-code">{curso.codigo}</div>
-                <div className="course-name">{curso.nombre}</div>
-                <div className="course-nf">NF: {curso.notaFinal ?? "-"}</div>
-                <div className="course-creditos">{curso.creditos} SCT</div>
-              </div>
-            ))}
+            {sem.cursos.map((curso) => {
+              const ns = normalizeStatus(curso.status, undefined);
+              return (
+                <CourseCard
+                  key={curso.codigo}
+                  code={curso.codigo}
+                  name={curso.nombre}
+                  creditos={curso.creditos}
+                  notaFinal={curso.notaFinal}
+                  status={curso.status}
+                  onMouseEnter={() => setHoveredCourse(curso)}
+                  onMouseLeave={() => setHoveredCourse(null)}
+                  className={`${ns.spanishClass} ${ns.englishClass}`}
+                />
+              );
+            })}
           </div>
         ))}
       </div>
@@ -85,15 +107,14 @@ const CurriculumGrid: React.FC<CurriculumGridProps> = ({ semestres, allCourses, 
           <div className="prereq-title">Prerrequisitos para:</div>
           <div className="prereq-course-name">{hoveredCourse.nombre}</div>
           <hr />
-          
-          {hoveredCourse.prereq ? (
+          {hoveredPrereqEntries.length === 0 ? (
+            <div className="prereq-none">Sin Pre-Requisitos</div>
+          ) : (
             <ul>
-              {hoveredCourse.prereq.split(',').map((codigo) => (
-                <li key={codigo}>{findCourseName(codigo)}</li>
+              {hoveredPrereqEntries.map((entry) => (
+                <li key={entry.code}>{entry.name}</li>
               ))}
             </ul>
-          ) : (
-            <div className="prereq-none">Sin Pre-Requisitos</div>
           )}
         </div>
       )}

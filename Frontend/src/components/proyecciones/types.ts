@@ -2,6 +2,8 @@ export type CourseBox = {
   id: string;
   code?: string;
   status?: string;
+  creditos?: number;
+  name?: string;
 };
 
 export type SemesterSim = {

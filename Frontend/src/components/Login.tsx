@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import logoUcn from '../assets/logo-ucn.png';
 import '../styles/Login.css';
-
-const API_BASE_URL = "http://localhost:3000";
+import { buildUrl } from '../config/api';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -48,7 +47,7 @@ const Login: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/ucn/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+        buildUrl(`/ucn/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`)
       );
 
       if (!response.ok) {
@@ -61,7 +60,7 @@ const Login: React.FC = () => {
         // Muestra el error de la API
         setErrors({ api: 'Credenciales incorrectas. Inténtalo de nuevo.' });
       } else {
-        console.log('Login exitoso:', data);
+        // login successful; store data in localStorage
         // Guardamos campos esperados en localStorage para que otras pantallas los usen
         if (data.rut) localStorage.setItem('rut', data.rut);
         if (data.carreras) localStorage.setItem('carreras', JSON.stringify(data.carreras));
