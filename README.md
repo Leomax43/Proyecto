@@ -128,4 +128,8 @@ Pass: `abcd`
 Email: `ximena@example.com`
 Pass: `qwerty`
 
+**Usuario 2**
+Email: `pedro@example.com`
+Pass: `qwerty`
+
 ---

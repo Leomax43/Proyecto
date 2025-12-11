@@ -29,12 +29,27 @@
 .proj-title { font-weight: 600; color: #213547; }
 .proj-meta { font-size: 0.8rem; color: #666; }
 
-.proyecciones-detail { flex: 1; }
+.proyecciones-detail { flex: 1; position: relative; }
 .empty-state { padding: 28px; background: #fff; border-radius: 8px; text-align: center; color: #666; }
 
 .proj-head { display:flex; justify-content: space-between; align-items:center; gap:12px; margin-bottom: 12px; }
 .proj-title-input { font-size: 1.2rem; padding: 6px 8px; border-radius: 6px; border: 1px solid #ccc; flex: 1; background-color: white; color: #3d3d3d}
 .proj-controls .btn { margin-left: 8px; }
+
+.simulation-status { margin-bottom: 12px; padding: 10px 12px; border-radius: 6px; background: #e8f1ff; color: #0b4ca6; }
+.simulation-indicator { position: fixed; top: 18px; right: 24px; pointer-events: none; z-index: 1000; }
+.simulation-indicator-bubble { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(30, 89, 114, 0.92); color: #fff; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); font-size: 0.9rem; }
+.simulation-spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); border-top-color: #fff; animation: spin 0.8s linear infinite; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.simulation-error { margin-bottom: 12px; padding: 10px 12px; border-radius: 6px; background: #fdecea; color: #c0392b; }
+.projection-warnings { margin-bottom: 14px; padding: 12px 16px; border-radius: 6px; background: #fff7e6; border-left: 4px solid #f39c12; color: #8a5315; }
+.projection-warnings-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+.projection-warnings-title { font-weight: 600; margin: 0; }
+.projection-warnings ul { margin: 0; padding-left: 18px; }
+.projection-warnings li { margin-bottom: 4px; }
 
 .years-list { display:flex; flex-direction: column; gap: 14px; }
 .year-block { background: #fff; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); overflow: hidden; }
@@ -44,7 +59,6 @@
 .semester-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; align-items: start; margin-bottom: 12px; }
 .semester-label { background: #f0f6f7; color: #2c6a79; padding: 8px; border-radius: 6px; font-weight: 600; display:flex; align-items:center; }
 .semester-courses { display:flex; gap: 10px; flex-wrap: wrap; }
-
 .avance-course { min-width: 140px; width: auto; box-sizing: border-box; }
 
 /* Ensure CourseCard used inside proyecciones keeps a fixed size and doesn't translate on hover */
@@ -63,16 +77,19 @@
 .avance-course.status-reprobado { border-left: 6px solid #e74c3c; }
 .avance-course.status-inscrito { border-left: 6px solid #f39c12; }
 .avance-course.status-vacante { border-left: 6px solid #7f8c8d; }
+.avance-course.status-bloqueado { border-left: 6px solid #b23b2a; opacity: 0.6; cursor: not-allowed; }
 
 /* Proyecciones previously used a small credits badge; CourseCard exposes .course-creditos so prefer that. */
 
 
-.btn { padding: 8px 10px; border-radius: 6px; border: none; background: #1e5972; cursor: pointer; }
+.btn { padding: 8px 10px; border-radius: 6px; border: none; background: #1e5972; cursor: pointer; color: #fff; }
 .btn.primary { background: #f39c12; color: #fff; font-weight: 700; }
 .btn.danger { background: #e74c3c; color: #fff; }
+
 
 @media (max-width: 900px) {
   .proyecciones-body { flex-direction: column; }
   .proyecciones-sidebar { width: auto; }
   .semester-row { grid-template-columns: 1fr; }
+  .semester-actions { grid-column: 1 / -1; }
 }

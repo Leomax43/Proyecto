@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import './styles/Proyecciones.css';
 import YearBlock from './components/proyecciones/YearBlock';
-import type { YearSim, SemesterSim, Projection, CourseBox } from './components/proyecciones/types';
-import { makeId, makeEmptySemester, makeDefaultProjection, normalize, statusCycle } from './utils/projectionHelpers';
+import type { Projection } from './components/proyecciones/types';
+import { makeDefaultProjection, makeEmptySemester, makeId, normalize, statusCycle } from './utils/projectionHelpers';
 import { apiGet } from './config/api';
 import { useProjectionSimulation } from './hooks/useProjectionSimulation';
 
@@ -14,16 +14,6 @@ type ApiCurso = {
   creditos?: number;
   nivel?: number;
   prereq?: string;
-};
-
-type ApiAvance = {
-  nrc?: string;
-  period?: string;
-  student?: string;
-  course: string;
-  excluded?: boolean;
-  inscriptionType?: string;
-  status?: string;
 };
 
 const STORAGE_KEY = 'proyecciones_v1';
@@ -50,56 +40,88 @@ const Proyecciones: React.FC = () => {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return [];
       return JSON.parse(raw) as Projection[];
-    } catch (e) {
+    } catch {
       return [];
     }
   });
-  const [selectedId, setSelectedId] = useState<string | null>(proyecciones[0]?.id ?? null);
-  const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>({});
+
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Projection[];
+      return parsed[0]?.id ?? null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>({ 0: true });
+  const [warningsCollapsed, setWarningsCollapsed] = useState(true);
+  const [allCourses, setAllCourses] = useState<ApiCurso[]>([]);
+  const [userCareerData, setUserCareerData] = useState<{ rut: string; codCarrera: string; catalogo: string } | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(proyecciones));
   }, [proyecciones]);
 
   useEffect(() => {
-    if (proyecciones.length === 0) setSelectedId(null);
-    else if (!selectedId) setSelectedId(proyecciones[0].id);
+    if (proyecciones.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+    if (!selectedId) {
+      setSelectedId(proyecciones[0].id);
+    }
   }, [proyecciones, selectedId]);
 
-  const selected = useMemo(() => proyecciones.find(p => p.id === selectedId) || null, [proyecciones, selectedId]);
+  const selected = useMemo(
+    () => proyecciones.find((projection) => projection.id === selectedId) ?? null,
+    [proyecciones, selectedId],
+  );
 
   const createNew = () => {
-    const p = makeDefaultProjection('Proyección ' + (proyecciones.length + 1));
-    setProyecciones(prev => [p, ...prev]);
-    setSelectedId(p.id);
+    const projection = makeDefaultProjection();
+    setProyecciones((prev) => [...prev, projection]);
+    setSelectedId(projection.id);
+    setExpandedYears({ [projection.years[0]?.yearIndex ?? 0]: true });
   };
 
   const removeProjection = (id: string) => {
-    const next = proyecciones.filter(p => p.id !== id);
-    setProyecciones(next);
-    if (selectedId === id) setSelectedId(next[0]?.id ?? null);
+    setProyecciones((prev) => {
+      const filtered = prev.filter((projection) => projection.id !== id);
+      if (id === selectedId) {
+        setSelectedId(filtered[0]?.id ?? null);
+      }
+      return filtered;
+    });
   };
 
   const renameProjection = (id: string, title: string) => {
-    setProyecciones(prev => prev.map(p => p.id === id ? { ...p, title } : p));
+    setProyecciones((prev) =>
+      prev.map((projection) => (projection.id === id ? { ...projection, title } : projection)),
+    );
   };
 
   const addYearToProjection = (id: string) => {
-    setProyecciones(prev => prev.map(p => {
-      if (p.id !== id) return p;
-      const last = p.years[p.years.length - 1];
-      const nextIndex = (last?.yearIndex ?? 0) + 1;
-      const year: YearSim = { yearIndex: nextIndex, semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')], title: `Año Simulado ${nextIndex}` };
-      return { ...p, years: [...p.years, year] };
-    }));
+    setProyecciones((prev) =>
+      prev.map((projection) => {
+        if (projection.id !== id) return projection;
+        const nextIndex = projection.years.reduce((max, year) => Math.max(max, year.yearIndex), 0) + 1;
+        const newYear = {
+          yearIndex: nextIndex,
+          title: nextIndex === 0 ? 'Semestre Actual' : `Año Simulado ${nextIndex}`,
+          semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')],
+        };
+        return {
+          ...projection,
+          years: [...projection.years, newYear].sort((a, b) => a.yearIndex - b.yearIndex),
+        };
+      }),
+    );
   };
 
-  const toggleYear = (idx: number) => setExpandedYears(prev => ({ ...prev, [idx]: !prev[idx] }));
-
-  // --- Malla / cursos disponibles ---
-  const [allCourses, setAllCourses] = useState<ApiCurso[]>([]);
-  const [_allAvance, setAllAvance] = useState<ApiAvance[]>([]);
-  const [userCareerData, setUserCareerData] = useState<{ rut: string; codCarrera: string; catalogo: string } | null>(null);
+  const toggleYear = (idx: number) => setExpandedYears((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
   useEffect(() => {
     const fetchMalla = async () => {
@@ -108,168 +130,131 @@ const Proyecciones: React.FC = () => {
         const rut = localStorage.getItem('rut');
         if (!carrerasString || !rut) return;
         const carreras = JSON.parse(carrerasString);
-        if (!carreras || carreras.length === 0) return;
+        if (!Array.isArray(carreras) || carreras.length === 0) return;
         const carreraActual = carreras[0];
-        const codigo = carreraActual.codigo;
-        const catalogo = carreraActual.catalogo;
-        setUserCareerData({ rut, codCarrera: codigo, catalogo });
-        const data = await apiGet(`/ucn/malla?codigo=${encodeURIComponent(codigo)}&catalogo=${encodeURIComponent(catalogo)}`);
-        if (!Array.isArray(data)) return;
-        setAllCourses(data as ApiCurso[]);
-      } catch {}
+        if (!carreraActual?.codigo || !carreraActual?.catalogo) return;
+        setUserCareerData({ rut, codCarrera: carreraActual.codigo, catalogo: carreraActual.catalogo });
+        const data = await apiGet(
+          `/ucn/malla?codigo=${encodeURIComponent(carreraActual.codigo)}&catalogo=${encodeURIComponent(carreraActual.catalogo)}`,
+        );
+        if (Array.isArray(data)) setAllCourses(data as ApiCurso[]);
+      } catch {
+        /* noop */
+      }
     };
     fetchMalla();
   }, []);
 
-  useEffect(() => {
-    const fetchAvance = async () => {
-      try {
-        const rut = localStorage.getItem('rut');
-        const carrerasString = localStorage.getItem('carreras');
-        if (!rut || !carrerasString) return;
-        const carreras = JSON.parse(carrerasString);
-        if (!carreras || carreras.length === 0) return;
-        const carrera = carreras[0];
-        const data = await apiGet(`/ucn/avance?rut=${encodeURIComponent(rut)}&codCarrera=${encodeURIComponent(carrera.codigo)}`);
-        if (Array.isArray(data)) setAllAvance(data as ApiAvance[]);
-      } catch {}
-    };
-    fetchAvance();
-  }, []);
-
-  // --- Simulation using backend ---
-  const { simulatedYears, isSimulating: _isSimulating, simulationError: _simulationError, warnings: _warnings } = useProjectionSimulation(
+  const { simulatedYears, isSimulating, simulationError, warnings: simulationWarnings } = useProjectionSimulation(
     selected,
     userCareerData?.rut ?? null,
     userCareerData?.codCarrera ?? null,
-    userCareerData?.catalogo ?? null
+    userCareerData?.catalogo ?? null,
   );
 
-  const suggestedProjectionView = simulatedYears.length > 0 ? simulatedYears : (selected?.years ?? []);
+  const displayYears = useMemo(() => {
+    const source = simulatedYears.length > 0 ? simulatedYears : selected?.years ?? [];
+    const nameMap = new Map<string, string>(allCourses.map((course) => [normalize(course.codigo), course.asignatura]));
+    const creditsMap = new Map<string, number>(allCourses.map((course) => [normalize(course.codigo), course.creditos ?? 0]));
 
-  useEffect(() => {
-    if (!selected || !suggestedProjectionView || suggestedProjectionView.length === 0) return;
-    const allCoursesMap = new Map<string, ApiCurso>(allCourses.map(c => [normalize(c.codigo), c]));
-    setProyecciones(prev => prev.map(p => {
-      if (p.id !== selected.id) return p;
-      let changed = false;
-      const nextYears = p.years.map(y => {
-        if (y.yearIndex === 0) return y;
-        const suggestedYear = suggestedProjectionView.find(sy => sy.yearIndex === y.yearIndex);
-        if (!suggestedYear) return y;
-        const semesters = y.semesters.map((sem, si) => {
-          const suger = suggestedYear.semesters[si];
-          if (!suger) return sem;
-          const semNorms = new Set(sem.courses.map(c => normalize(c.code)));
-          const toAdd = suger.courses
-            .filter(c => (c.status || '').toUpperCase() === 'VACANTE')
-            .map(c => normalize(c.code))
-            .filter(n => n && !semNorms.has(n));
-          if (toAdd.length === 0) return sem;
-          changed = true;
-          const courses = sem.courses.map(c => {
-            if (toAdd.length > 0 && (!c.code || (c.code || '').trim() === '')) {
-              const norm = toAdd.shift()!;
-              const code = allCoursesMap.get(norm)?.codigo ?? norm;
-              const creds = allCoursesMap.get(norm)?.creditos ?? 0;
-              return { ...c, code, status: 'VACANTE', creditos: creds };
-            }
-            return c;
-          });
-          while (toAdd.length > 0) {
-            const norm = toAdd.shift()!;
-            const code = allCoursesMap.get(norm)?.codigo ?? norm;
-            const creds = allCoursesMap.get(norm)?.creditos ?? 0;
-            courses.push({ id: makeId(), code, status: 'VACANTE', creditos: creds });
-          }
-          return { ...sem, courses };
-        });
-        return { ...y, semesters };
-      });
-      if (!changed) return p;
-      return { ...p, years: nextYears };
+    return source.map((year) => ({
+      ...year,
+      semesters: year.semesters.map((semester) => ({
+        ...semester,
+        courses: semester.courses.map((course) => {
+          const codeTrim = (course.code || '').trim();
+          if (!codeTrim) return { ...course };
+          const normalizedCode = normalize(codeTrim);
+          return {
+            ...course,
+            name: course.name ?? nameMap.get(normalizedCode),
+            creditos: course.creditos ?? creditsMap.get(normalizedCode),
+          };
+        }),
+      })),
     }));
-  }, [suggestedProjectionView, selected, setProyecciones]);
-
-  const viewYearsWithNames = useMemo(() => {
-    const source = (suggestedProjectionView && suggestedProjectionView.length > 0) ? suggestedProjectionView : (selected ? selected.years : []);
-    const nameMap = new Map<string, string>(allCourses.map(c => [normalize(c.codigo), c.asignatura]));
-    const creditsMap = new Map<string, number>(allCourses.map(c => [normalize(c.codigo), c.creditos ?? 0]));
-    const persistedLookup = new Map<string, CourseBox>();
-    if (selected) {
-      selected.years.forEach(y => y.semesters.forEach((s, si) => s.courses.forEach(c => {
-        if (c.code) persistedLookup.set(`${y.yearIndex}|${si}|${normalize(c.code)}`, c);
-      })));
-    }
-    return source.map(y => ({
-      ...y,
-      semesters: y.semesters.map((s, si) => ({
-        ...s,
-        courses: s.courses.map(c => {
-          const persistedNorm = normalize(c.code);
-          const key = `${y.yearIndex}|${si}|${persistedNorm}`;
-          const persisted = persistedLookup.get(key);
-          const box = persisted ? { ...persisted } : { ...c };
-          const codeTrim = (box.code || '').trim();
-          const norm = normalize(codeTrim);
-          return { ...box, name: codeTrim ? (nameMap.get(norm) || undefined) : undefined, creditos: codeTrim ? (creditsMap.get(norm) ?? 0) : undefined };
-        })
-      }))
-    }));
-  }, [suggestedProjectionView, selected, allCourses]);
+  }, [simulatedYears, selected, allCourses]);
 
   const toggleCourseByKey = (projId: string, yearIndex: number, semIdx: number, key: string) => {
-    setProyecciones(prev => prev.map(p => {
-      if (p.id !== projId) return p;
-      const parts = key.split('||');
-      const boxId = parts[0] || '';
-      const boxCode = (parts[1] || '').trim();
-      const normBoxCode = normalize(boxCode || '');
-      const ensureSemesters = (y: YearSim, idx: number): YearSim => {
-        const copy: YearSim = { ...y } as YearSim;
-        const sems = [...copy.semesters];
-        while (sems.length <= idx) sems.push(makeEmptySemester(`Semestre adicional ${sems.length + 1}`));
-        copy.semesters = sems;
-        return copy;
-      };
-      if (boxId) {
-        const years = p.years.map(y => {
-          if (y.yearIndex !== yearIndex) return y;
-          const yWithSems = ensureSemesters(y, semIdx);
-          const semesters = yWithSems.semesters.map((s: SemesterSim, si: number) => {
-            if (si !== semIdx) return s;
-            const courses = s.courses.map((c: CourseBox) => c.id === boxId ? { ...c, status: statusCycle(c.status) } : c);
-            return { ...s, courses };
-          });
-          return { ...yWithSems, semesters };
-        });
-        const changed = years.some((y: YearSim) => y.yearIndex === yearIndex && y.semesters.some((s: SemesterSim) => s.courses.some((c: CourseBox) => c.id === boxId)));
-        if (changed) return { ...p, years };
-      }
-      for (const y of p.years) {
-        for (let si = 0; si < y.semesters.length; si++) {
-          const s = y.semesters[si];
-          for (let ci = 0; ci < s.courses.length; ci++) {
-            const c = s.courses[ci];
-            if ((boxId && c.id === boxId) || (boxCode && normalize(c.code) === normBoxCode)) {
-              const years = p.years.map(yy => ({ ...yy, semesters: yy.semesters.map(ss => ({ ...ss, courses: ss.courses.map(cc => ((cc.id === c.id) ? { ...cc, status: statusCycle(cc.status) } : cc)) })) }));
-              return { ...p, years };
-            }
-          }
+    const [idPart, codePart = ''] = key.split('||');
+    const normalizedCodeKey = normalize(codePart);
+    const displayYear = displayYears.find((year) => year.yearIndex === yearIndex);
+    const displayCourse = displayYear?.semesters[semIdx]?.courses.find((course) => {
+      const matchesId = idPart ? course.id === idPart : false;
+      const matchesCode = normalizedCodeKey ? normalize(course.code) === normalizedCodeKey : false;
+      return matchesId || matchesCode;
+    });
+
+    setProyecciones((prev) =>
+      prev.map((projection) => {
+        if (projection.id !== projId) return projection;
+
+        let years = projection.years;
+        if (!years.some((year) => year.yearIndex === yearIndex)) {
+          const newYear = {
+            yearIndex,
+            title: yearIndex === 0 ? 'Semestre Actual' : `Año Simulado ${yearIndex}`,
+            semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')],
+          };
+          years = [...years, newYear].sort((a, b) => a.yearIndex - b.yearIndex);
         }
-      }
-      const yearsAdd = p.years.map(y => {
-        if (y.yearIndex !== yearIndex) return y;
-        const yWithSems = ensureSemesters(y, semIdx);
-        const semesters = yWithSems.semesters.map((s: SemesterSim, si: number) => {
-          if (si !== semIdx) return s;
-          const courses = [...s.courses, { id: boxId, code: boxCode, status: 'VACANTE', creditos: 0 }];
-          return { ...s, courses };
+
+        const updatedYears = years.map((year) => {
+          if (year.yearIndex !== yearIndex) return year;
+
+          const semesters = [...year.semesters];
+          let structureChanged = false;
+          while (semesters.length <= semIdx) {
+            semesters.push(makeEmptySemester(`Semestre adicional ${semesters.length + 1}`));
+            structureChanged = true;
+          }
+
+          let toggled = false;
+          const newSemesters = semesters.map((semester, index) => {
+            if (index !== semIdx) {
+              return structureChanged ? { ...semester } : semester;
+            }
+
+            const courses = semester.courses.map((course) => {
+              if (toggled) return course;
+              const matchesId = idPart ? course.id === idPart : false;
+              const matchesCode = normalizedCodeKey ? normalize(course.code) === normalizedCodeKey : false;
+              if (matchesId || matchesCode) {
+                toggled = true;
+                return { ...course, status: statusCycle(course.status) };
+              }
+              return course;
+            });
+
+            if (!toggled && displayCourse && displayCourse.code) {
+              const nextStatus = statusCycle(displayCourse.status);
+              courses.push({
+                id: displayCourse.id || makeId(),
+                code: displayCourse.code,
+                status: nextStatus,
+                creditos: displayCourse.creditos,
+                name: displayCourse.name,
+              });
+              toggled = true;
+            }
+
+            return { ...semester, courses };
+          });
+
+          if (!structureChanged && !toggled) return year;
+
+          return {
+            ...year,
+            semesters: newSemesters,
+          };
         });
-        return { ...yWithSems, semesters };
-      });
-      return { ...p, years: yearsAdd };
-    }));
+
+        return {
+          ...projection,
+          years: updatedYears,
+        };
+      }),
+    );
   };
 
   // --- RENDER ---
@@ -315,8 +300,43 @@ const Proyecciones: React.FC = () => {
                       <button className="btn danger" onClick={() => removeProjection(selected.id)}>Eliminar</button>
                     </div>
                   </div>
+                  {isSimulating && (
+                    <div className="simulation-indicator" role="status" aria-live="polite">
+                      <div className="simulation-indicator-bubble">
+                        <span className="simulation-spinner" aria-hidden="true" />
+                        Calculando proyección…
+                      </div>
+                    </div>
+                  )}
+                  {simulationError && (
+                    <div className="simulation-error">{simulationError}</div>
+                  )}
+                  {simulationWarnings.length > 0 && (
+                    <div className="projection-warnings">
+                      <div className="projection-warnings-header">
+                        <div className="projection-warnings-title">
+                          Restricciones detectadas ({simulationWarnings.length})
+                        </div>
+                        <button
+                          className="btn"
+                          onClick={() => setWarningsCollapsed((prev) => !prev)}
+                        >
+                          {warningsCollapsed ? 'Mostrar' : 'Minimizar'}
+                        </button>
+                      </div>
+                      {!warningsCollapsed && (
+                        <ul>
+                          {simulationWarnings.map((warning, idx) => (
+                            <li key={`${warning.yearIndex}-${warning.semIdx}-${idx}`}>
+                              <strong>Año {warning.yearIndex}, Semestre {warning.semIdx + 1}:</strong> {warning.message}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                   <div className="years-list">
-                    {viewYearsWithNames.map((y) => (
+                    {displayYears.map((y) => (
                       <YearBlock
                         key={y.yearIndex}
                         year={y}

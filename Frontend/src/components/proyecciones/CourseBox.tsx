@@ -12,14 +12,20 @@ type Props = {
 const CourseBox: React.FC<Props> = ({ box, onClick }) => {
   const clickKey = `${box.id}||${box.code || ''}`;
   const ns = normalizeStatus(box.status, undefined);
+  const isBlocked = (box.status || '').toString().toUpperCase() === 'BLOQUEADO';
+  const handleClick = () => {
+    if (isBlocked) return;
+    onClick(clickKey);
+  };
+  const blockedClass = isBlocked ? ' status-bloqueado' : '';
   return (
     <CourseCard
       code={box.code || '—'}
       name={box.name}
       creditos={box.creditos}
       status={box.status}
-      onClick={() => onClick(clickKey)}
-      className={`avance-course ${ns.spanishClass} ${ns.englishClass}`}
+      onClick={handleClick}
+      className={`avance-course ${ns.spanishClass} ${ns.englishClass}${blockedClass}`}
     />
   );
 };

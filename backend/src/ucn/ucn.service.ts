@@ -88,14 +88,24 @@ export class UcnService {
     }
 
     // 2. Optionally fetch student's avance to include status
-    let statusMap: Record<string, string> = {};
+    const statusMap = new Map<string, { status: string; periodValue: number; order: number }>();
     if (rut) {
       const avanceData = await this.getAvance(rut, codigo);
       if (Array.isArray(avanceData)) {
-        avanceData.forEach((a: any) => {
-          const courseCode = (a.course || a.codigo || '').toString().trim();
-          const status = (a.status || '').toString();
-          if (courseCode) statusMap[courseCode] = status;
+        avanceData.forEach((a: any, index: number) => {
+          const courseCode = this.normalizeCode(a.course || a.codigo);
+          if (!courseCode) return;
+          const status = (a.status || '').toString().trim();
+          if (!status) return;
+          const periodValue = this.getPeriodValue(a.period);
+          const existing = statusMap.get(courseCode);
+          if (
+            !existing ||
+            periodValue > existing.periodValue ||
+            (periodValue === existing.periodValue && index > existing.order)
+          ) {
+            statusMap.set(courseCode, { status, periodValue, order: index });
+          }
         });
       }
     }
@@ -105,7 +115,8 @@ export class UcnService {
 
     mallaData.forEach((apiCurso: any) => {
       const nivel = apiCurso.nivel || 0;
-      const codigo = apiCurso.codigo || '';
+      const codigo = this.normalizeCode(apiCurso.codigo);
+      if (!codigo) return;
       
       const curso: CursoDto = {
         codigo,
@@ -115,8 +126,9 @@ export class UcnService {
       };
 
       // Add status if available
-      if (statusMap[codigo]) {
-        curso.status = statusMap[codigo];
+      const statusInfo = statusMap.get(codigo);
+      if (statusInfo) {
+        curso.status = statusInfo.status;
       }
 
       if (!grupos.has(nivel)) {
@@ -140,6 +152,20 @@ export class UcnService {
       .split(',')
       .map(x => x.trim().toUpperCase())
       .filter(Boolean);
+  }
+
+  private normalizeCode(value?: string): string {
+    return (value || '').toString().trim().toUpperCase();
+  }
+
+  private getPeriodValue(period?: string | number): number {
+    if (typeof period === 'number' && Number.isFinite(period)) {
+      return period;
+    }
+    const normalized = (period || '').toString().trim();
+    if (!normalized) return Number.NEGATIVE_INFINITY;
+    const parsed = parseInt(normalized, 10);
+    return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
   }
 
   // 🔹 5. AVANCE RESUMEN (agrupado por carrera y período)
