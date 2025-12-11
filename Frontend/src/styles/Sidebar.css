@@ -5,10 +5,12 @@
   width: 270px;
   min-width: 270px;
   max-width: 270px;
+  /* Incluir padding dentro del cálculo de height (evita overflow por padding) */
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem 1rem 1rem 1rem;
+  padding: 3.5rem 1rem 1rem 1rem; 
   flex-shrink: 0;
   position: sticky;
   top: 0;
@@ -17,6 +19,31 @@
   min-height: 100vh;
   /* Permitir scroll interno si el contenido del sidebar sobrepasa el alto */
   overflow: auto;
+  /* transición para ancho al minimizar/expandir */
+  transition: width 200ms ease, min-width 200ms ease;
+}
+
+/* Botón para minimizar / expandir */
+.sidebar-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: #e38e04;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  z-index: 60;
+  transition: right 200ms ease, transform 150ms ease;
+}
+.sidebar-toggle:hover {
+  background: rgba(255,255,255,0.12);
 }
 
 .sidebar-nav {
@@ -69,7 +96,7 @@
 }
 
 .avatar-url-input {
-  width: 240px;
+  width: 85%;
   margin: 0 auto 1rem auto;
   padding: 14px;
   border-radius: 12px;
@@ -99,11 +126,9 @@
 
 .btn.small {
   padding: 4px 10px;  
-  font-size: 0.8rem;   
+  font-size: 0.7rem;   
   border-radius: 5px;  
   font-weight: 600;
-  cursor: pointer;
-  border: none;
 }
 
 /* Guardar */
@@ -149,17 +174,215 @@
   overflow-y: auto;
 }
 
-.sidebar-btn {
-  width: 100pvx;
-  padding: 10px;
+/* Estado colapsado */
+.sidebar.collapsed {
+  width: 72px;
+  min-width: 72px;
+  max-width: 72px;
+}
+
+/* When collapsed, move the toggle slightly outside so it doesn't overlap avatar */
+.sidebar.collapsed .sidebar-toggle {
+  /* Keep the toggle inside the collapsed sidebar so it doesn't get cut off */
+  right: 12px;
+  top: 12px;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  border-radius: 6px;
+}
+
+/* Button/icon layout inside nav buttons */
+.sidebar-btn,
+.sidebar-nav a.sidebar-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  min-height: 44px;
   border-radius: 8px;
   border: none;
-  background: #fff;
-  color: #2c5a6a;
+  background: #527c9a;
+  color: #d5d5d5;
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
-  transition: background 0.2s;
+  text-decoration: none;
+  transition: background 0.2s, padding 150ms ease;
+}
+
+.sidebar-btn .sidebar-btn-content,
+.sidebar-logout > .sidebar-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.sidebar-btn .icon,
+.sidebar-logout .icon {
+  display: inline-flex;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+}
+
+.sidebar-btn .label,
+.sidebar-logout .label {
+  flex: 1 1 auto;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar.collapsed .sidebar-btn,
+.sidebar.collapsed .sidebar-nav a.sidebar-btn {
+  justify-content: center;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.sidebar.collapsed .sidebar-btn .label,
+.sidebar.collapsed .sidebar-logout .label {
+  display: none;
+}
+
+/* Reglas específicas finales para estado 'activo' (mayor especificidad) */
+.sidebar-nav a.sidebar-btn.active,
+.sidebar-btn.active,
+.sidebar-logout.active {
+  background: #ffffff;
+  color: #05506b;
+}
+
+/* Asegurar que el icono también cambie de color en estado activo */
+.sidebar-nav a.sidebar-btn.active .icon,
+.sidebar-btn.active .icon,
+.sidebar-logout.active .icon {
+  color: #05506b;
+}
+
+/* En vista colapsada, destacar el fondo del icono para mostrar activo */
+.sidebar.collapsed .sidebar-nav a.sidebar-btn.active,
+.sidebar.collapsed .sidebar-btn.active {
+  background: transparent;
+}
+
+/* Make active icon clearly visible when sidebar is collapsed */
+.sidebar.collapsed .sidebar-nav a.sidebar-btn.active .icon,
+.sidebar.collapsed .sidebar-btn.active .icon {
+  /* Show active icon in white when collapsed (no layout shift) */
+  background: transparent !important;
+  color: #ffffff !important; /* icon shown in white */
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  transform: none;
+  transition: color 140ms ease;
+}
+
+/* Force SVG fill/stroke to ensure currentColor is applied across browsers */
+.sidebar-nav a.sidebar-btn.active svg,
+.sidebar-btn.active svg,
+.sidebar-logout.active svg {
+  fill: #05506b !important;
+  stroke: #05506b !important;
+}
+
+.sidebar.collapsed .sidebar-nav a.sidebar-btn.active svg,
+.sidebar.collapsed .sidebar-btn.active svg,
+.sidebar.collapsed .sidebar-logout.active svg {
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Ensure non-active icons stay transparent when collapsed */
+.sidebar.collapsed .sidebar-btn .icon,
+.sidebar.collapsed .sidebar-nav a.sidebar-btn .icon {
+  background: transparent;
+  color: currentColor;
+}
+
+/* Tooltips for collapsed state: appear to the right of the sidebar */
+.sidebar-btn,
+.sidebar-logout,
+.sidebar-nav a.sidebar-btn {
+  position: relative;
+}
+
+.sidebar.collapsed .sidebar-btn[data-tooltip]:hover::after,
+.sidebar.collapsed .sidebar-btn[data-tooltip]:focus::after,
+.sidebar.collapsed .sidebar-btn[data-tooltip]:focus-visible::after,
+.sidebar.collapsed .sidebar-logout[data-tooltip]:hover::after,
+.sidebar.collapsed .sidebar-logout[data-tooltip]:focus::after,
+.sidebar.collapsed .sidebar-logout[data-tooltip]:focus-visible::after,
+.sidebar.collapsed .sidebar-nav a.sidebar-btn[data-tooltip]:hover::after,
+.sidebar.collapsed .sidebar-nav a.sidebar-btn[data-tooltip]:focus::after,
+.sidebar.collapsed .sidebar-nav a.sidebar-btn[data-tooltip]:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  z-index: 120;
+}
+
+/* small arrow */
+.sidebar.collapsed .sidebar-btn[data-tooltip]:hover::before,
+.sidebar.collapsed .sidebar-btn[data-tooltip]:focus::before,
+.sidebar.collapsed .sidebar-btn[data-tooltip]:focus-visible::before,
+.sidebar.collapsed .sidebar-logout[data-tooltip]:hover::before,
+.sidebar.collapsed .sidebar-logout[data-tooltip]:focus::before,
+.sidebar.collapsed .sidebar-logout[data-tooltip]:focus-visible::before,
+.sidebar.collapsed .sidebar-nav a.sidebar-btn[data-tooltip]:hover::before,
+.sidebar.collapsed .sidebar-nav a.sidebar-btn[data-tooltip]:focus::before,
+.sidebar.collapsed .sidebar-nav a.sidebar-btn[data-tooltip]:focus-visible::before {
+  content: "";
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 8px solid rgba(0,0,0,0.85);
+  margin-left: 4px;
+  z-index: 121;
+}
+
+.sidebar.collapsed .sidebar-user-name,
+.sidebar.collapsed .sidebar-user-career,
+.sidebar.collapsed .avatar-url-input,
+.sidebar.collapsed .sidebar-user-info {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-avatar {
+  width: 48px;
+  height: 48px;
+}
+
+.sidebar.collapsed .sidebar-btn {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.sidebar.collapsed .avatar-edit-overlay {
+  display: none;
 }
 
 .sidebar-btn:not(.active) {
@@ -172,9 +395,51 @@
   color: #05506b;
 }
 
+/* Hover / focus / active interactions for buttons and links */
+.sidebar-btn:not(.active):hover,
+.sidebar-nav a.sidebar-btn:not(.active):hover,
+.sidebar-btn:not(.active):focus,
+.sidebar-nav a.sidebar-btn:not(.active):focus {
+  background: #3e6b86; /* slightly darker/stronger on hover */
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+.sidebar-btn.active:hover,
+.sidebar-nav a.sidebar-btn.active:hover,
+.sidebar-btn.active:focus,
+.sidebar-nav a.sidebar-btn.active:focus {
+  /* subtle effect for already active */
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+
+/* Click/press feedback */
+.sidebar-btn:active,
+.sidebar-nav a.sidebar-btn:active,
+.sidebar-logout:active {
+  transform: translateY(0);
+  opacity: 0.95;
+}
+
+/* Keyboard focus visible for accessibility */
+.sidebar-btn:focus-visible,
+.sidebar-nav a.sidebar-btn:focus-visible,
+.sidebar-logout:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(15,120,170,0.18), 0 6px 18px rgba(0,0,0,0.12);
+}
+
+/* Logout button: reuse layout but with its own colors */
 .sidebar-logout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   width: 100%;
-  padding: 0.7rem 0;
+  box-sizing: border-box;
+  padding: 10px;
+  margin-top: auto;
   border-radius: 8px;
   border: none;
   background: #f39c12;
@@ -182,9 +447,27 @@
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
-  margin-top: auto;
   box-shadow: 0 2px 8px rgba(0,0,0,0.10);
   transition: background 0.2s;
+}
+
+.sidebar-logout .icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.sidebar-logout .label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar.collapsed .sidebar-logout .label {
+  display: none;
 }
 
 .sidebar-logout:hover {
