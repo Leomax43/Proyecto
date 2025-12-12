@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
@@ -22,4 +22,12 @@ describe('AppController (e2e)', () => {
       .expect(200)
       .expect('Hola desde mi primer backend con NestJS!');
   });
+
+  it('/ruta-falsa (GET)', () => {
+  return request(app.getHttpServer())
+    .get('/ruta-falsa')
+    .expect(404);
+}, 10000);
+
+
 });
