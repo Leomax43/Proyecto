@@ -9,10 +9,19 @@ describe('UsersController', () => {
       controllers: [UsersController],
     }).compile();
 
+
     controller = module.get<UsersController>(UsersController);
   });
-
+  //test 1
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
+  //test 2
+  it('should return the correct user list message', () => {
+    const result = controller.findAll();
+    expect(result).toBe('Aquí se listarían los usuarios');
+  });
+
+
+
 });

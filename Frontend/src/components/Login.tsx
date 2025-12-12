@@ -1,9 +1,11 @@
+import { useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
 import logoUcn from '../assets/logo-ucn.png';
 import '../styles/Login.css';
 import { buildUrl } from '../config/api';
 
 const Login: React.FC = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; api?: string }>({});
@@ -72,7 +74,7 @@ const Login: React.FC = () => {
           localStorage.setItem('email', email);
         }
         if (data.nombre) localStorage.setItem('nombre', data.nombre);
-        window.location.href = '/home';
+        navigate('/home');
       }
     } catch (err) {
       console.error(err);
