@@ -22,7 +22,7 @@ wsl --update
 
 ### ✔️ Instalar Docker Desktop
 
-Asegúrate de abrir **Docker Desktop antes de iniciar el backend**.
+Asegurar de abrir **Docker Desktop antes de iniciar el backend**.
 
 ---
 
