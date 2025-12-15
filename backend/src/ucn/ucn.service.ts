@@ -9,8 +9,9 @@ import { AvanceSummaryDto, CarreraAvanceDto, PeriodoDto, CursoAvanceDto } from '
 export interface UcnLoginResponse {
   rut: string;
   carreras: any[];
-  error?: string;  
-  rol?: string;    
+  error?: string;
+  rol?: string;
+  nombre?: string;
 }
 
 @Injectable()
@@ -30,7 +31,35 @@ export class UcnService {
       const data: UcnLoginResponse = response.data;
 
       if (!data.error) {
-        data.rol = 'estudiante'; 
+        data.rol = 'estudiante';
+
+        const nameCandidates = [
+          data.nombre,
+          (response.data as any).name,
+          (response.data as any).nombres,
+          (response.data as any).student,
+          (response.data as any).alumno,
+          (response.data as any).usuario,
+        ];
+        data.nombre = nameCandidates.find((value) => typeof value === 'string' && value.trim())?.trim();
+
+        if (Array.isArray(data.carreras)) {
+          data.carreras = data.carreras.map((carrera: any) => {
+            const codigo = [carrera.codigo, carrera.codCarrera, carrera.id]
+              .find((value) => typeof value === 'string' && value.trim());
+            const catalogo = [carrera.catalogo, carrera.plan, carrera.codPlan]
+              .find((value) => typeof value === 'string' && value.trim());
+            const nombreCarrera = [carrera.nombre, carrera.carrera, carrera.descripcion]
+              .find((value) => typeof value === 'string' && value.trim());
+
+            return {
+              ...carrera,
+              codigo: codigo ? codigo.trim() : carrera.codigo,
+              catalogo: catalogo ? catalogo.trim() : carrera.catalogo,
+              nombre: nombreCarrera ? nombreCarrera.trim() : carrera.nombre,
+            };
+          });
+        }
       }
       return data;
     } catch (error) {

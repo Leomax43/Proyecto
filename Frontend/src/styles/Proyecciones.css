@@ -82,9 +82,95 @@
 /* Proyecciones previously used a small credits badge; CourseCard exposes .course-creditos so prefer that. */
 
 
+.auto-config-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 18px;
+}
+
+.auto-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  color: #1e5972;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.auto-config-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.auto-config-header-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.auto-config-toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.auto-config-hint {
+  font-size: 0.85rem;
+  color: #6b7a8c;
+}
+
+.auto-config-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.auto-config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #253b4b;
+}
+
+.auto-config-field select,
+.auto-config-field input {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #c7d3de;
+  background: #f9fbfd;
+  color: #1f2a33;
+}
+
+.auto-config-label {
+  font-weight: 600;
+}
+
+.auto-config-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #253b4b;
+}
+
+.auto-config-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+
 .btn { padding: 8px 10px; border-radius: 6px; border: none; background: #1e5972; cursor: pointer; color: #fff; }
 .btn.primary { background: #f39c12; color: #fff; font-weight: 700; }
 .btn.danger { background: #e74c3c; color: #fff; }
+.btn.secondary { background: #1e5972; }
+.btn[disabled] { opacity: 0.55; cursor: not-allowed; }
 
 
 @media (max-width: 900px) {

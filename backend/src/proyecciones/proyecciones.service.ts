@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { SimulateProjectionDto, SimulationResultDto } from './dto/simulate-projection.dto';
+import {
+  SimulateProjectionDto,
+  SimulationResultDto,
+} from './dto/simulate-projection.dto';
 import { SimulationService } from './simulation.service';
 import { UcnService } from '../ucn/ucn.service';
 
@@ -38,6 +41,6 @@ export class ProyeccionesService {
     const avance = Array.isArray(avanceData) ? avanceData as ApiAvance[] : [];
     
     // 3. Ejecutar simulación
-    return this.simulationService.simulate(dto.proyeccionActual, malla, avance);
+    return this.simulationService.simulate(dto.proyeccionActual, malla, avance, dto.preferences);
   }
 }

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { Projection, YearSim } from '../components/proyecciones/types';
+import { useState, useEffect, useMemo } from 'react';
+import type { Projection, YearSim, SimulationPreferences } from '../components/proyecciones/types';
 
 interface UseSimulationResult {
   simulatedYears: YearSim[];
@@ -12,16 +12,38 @@ export function useProjectionSimulation(
   projection: Projection | null,
   rut: string | null,
   codCarrera: string | null,
-  catalogo: string | null
+  catalogo: string | null,
+  preferences: SimulationPreferences | null,
 ): UseSimulationResult {
   const [simulatedYears, setSimulatedYears] = useState<YearSim[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationError, setSimulationError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<Array<{ yearIndex: number; semIdx: number; message: string }>>([]);
 
+  const sanitizedPreferences = useMemo(() => {
+    if (!preferences) return null;
+    const allowedKeys: Array<keyof SimulationPreferences> = [
+      'maxCoursesPerSemester',
+      'targetLoad',
+      'priority',
+      'unlockFocus',
+      'levelDispersion',
+      'semesterLimit',
+    ];
+    const entries = Object.entries(preferences).filter(
+      ([key, value]) =>
+        allowedKeys.includes(key as keyof SimulationPreferences) && value !== null && value !== undefined,
+    );
+    if (entries.length === 0) return null;
+    return Object.fromEntries(entries) as SimulationPreferences;
+  }, [preferences]);
+
+  const preferencesKey = useMemo(() => JSON.stringify(sanitizedPreferences ?? {}), [sanitizedPreferences]);
+
   useEffect(() => {
     if (!projection || !rut || !codCarrera || !catalogo) {
       setSimulatedYears(projection?.years ?? []);
+      setWarnings([]);
       return;
     }
 
@@ -30,19 +52,25 @@ export function useProjectionSimulation(
       setSimulationError(null);
       
       try {
+        const payload: any = {
+          rut,
+          codCarrera,
+          catalogo,
+          proyeccionActual: {
+            id: projection.id,
+            title: projection.title,
+            years: projection.years,
+          },
+        };
+
+        if (sanitizedPreferences) {
+          payload.preferences = sanitizedPreferences;
+        }
+
         const response = await fetch('http://localhost:3000/proyecciones/simulate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            rut,
-            codCarrera,
-            catalogo,
-            proyeccionActual: {
-              id: projection.id,
-              title: projection.title,
-              years: projection.years,
-            },
-          }),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
@@ -63,7 +91,7 @@ export function useProjectionSimulation(
     };
 
     runSimulation();
-  }, [projection, rut, codCarrera, catalogo]);
+  }, [projection, rut, codCarrera, catalogo, preferencesKey, sanitizedPreferences]);
 
   return { simulatedYears, isSimulating, simulationError, warnings };
 }

@@ -3,6 +3,7 @@ import {
   CourseBoxDto,
   ProyeccionDto,
   SemesterDto,
+  SimulationPreferencesDto,
   SimulationResultDto,
   WarningDto,
   YearDto,
@@ -55,6 +56,7 @@ type CourseMeta = {
   creditRequirement: number;
   minLevelRequirement: number;
   isTitulo: boolean;
+  dependentCount: number;
 };
 
 type StudentState = {
@@ -93,18 +95,92 @@ type ProcessedCourse = {
   originalIndex: number;
 };
 
+type SimulationPreferences = {
+  maxCoursesPerSemester: number | null;
+  targetCredits: { min: number; max: number } | null;
+  priority: 'PENDING_FIRST' | 'NEW_FIRST' | 'BALANCED';
+  unlockFocus: boolean;
+  levelDispersion: number;
+  semesterLimit: number | null;
+};
+
 @Injectable()
 export class SimulationService {
-  simulate(proyeccion: ProyeccionDto, allCourses: ApiCurso[], allAvance: ApiAvance[]): SimulationResultDto {
+  simulate(
+    proyeccion: ProyeccionDto,
+    allCourses: ApiCurso[],
+    allAvance: ApiAvance[],
+    rawPreferences?: SimulationPreferencesDto,
+  ): SimulationResultDto {
     const courseMeta = this.buildCourseMeta(allCourses || []);
-    const studentState = this.buildStudentState(allAvance || [], courseMeta);
-    const initialYears = this.prepareInitialYears(proyeccion, studentState, courseMeta);
-    const populatedYears = this.autoPopulateFutureYears(initialYears, courseMeta, studentState);
+    const currentOverrides = this.extractCurrentSemesterOverrides(proyeccion);
+    const adjustedAvance = this.applyOverridesToAvance(allAvance || [], currentOverrides);
+    const studentState = this.buildStudentState(adjustedAvance, courseMeta);
+    this.applyOverridesToStudentState(studentState, currentOverrides, courseMeta);
+    const initialYears = this.prepareInitialYears(proyeccion, studentState, courseMeta, currentOverrides);
+    const retakeSeededYears = this.ensureFailedCoursesRetake(initialYears, currentOverrides, courseMeta);
+    const preferences = this.buildPreferences(rawPreferences);
+    const autoPopulation = this.autoPopulateFutureYears(retakeSeededYears, courseMeta, studentState, preferences);
 
-    const warnings: WarningDto[] = [];
-    const processedYears = this.processYears(populatedYears, courseMeta, studentState, warnings);
+    const warnings: WarningDto[] = [...autoPopulation.warnings];
+    const processedYears = this.processYears(autoPopulation.years, courseMeta, studentState, warnings);
 
     return { years: processedYears, warnings };
+  }
+
+  private buildPreferences(dto?: SimulationPreferencesDto): SimulationPreferences {
+    const defaults: SimulationPreferences = {
+      maxCoursesPerSemester: null,
+      targetCredits: null,
+      priority: 'BALANCED',
+      unlockFocus: false,
+      levelDispersion: 2,
+      semesterLimit: null,
+    };
+
+    if (!dto) {
+      return defaults;
+    }
+
+    const preferences: SimulationPreferences = { ...defaults };
+
+    if (typeof dto.maxCoursesPerSemester === 'number') {
+      preferences.maxCoursesPerSemester = dto.maxCoursesPerSemester;
+    }
+
+    if (dto.targetLoad) {
+      preferences.targetCredits = this.mapTargetLoad(dto.targetLoad);
+    }
+
+    if (dto.priority) {
+      preferences.priority = dto.priority;
+    }
+
+    if (typeof dto.unlockFocus === 'boolean') {
+      preferences.unlockFocus = dto.unlockFocus;
+    }
+
+    if (typeof dto.levelDispersion === 'number') {
+      preferences.levelDispersion = Math.max(0, Math.min(2, dto.levelDispersion));
+    }
+
+    if (typeof dto.semesterLimit === 'number') {
+      preferences.semesterLimit = Math.max(1, dto.semesterLimit);
+    }
+
+    return preferences;
+  }
+
+  private mapTargetLoad(load: 'LOW' | 'MEDIUM' | 'HIGH'): { min: number; max: number } {
+    switch (load) {
+      case 'LOW':
+        return { min: 12, max: 18 };
+      case 'MEDIUM':
+        return { min: 18, max: 24 };
+      case 'HIGH':
+      default:
+        return { min: 24, max: 30 };
+    }
   }
 
   private buildCourseMeta(allCourses: ApiCurso[]): Map<string, CourseMeta> {
@@ -159,13 +235,159 @@ export class SimulationService {
         creditRequirement,
         minLevelRequirement,
         isTitulo: credits >= 30,
+        dependentCount: 0,
       });
     });
 
     map.forEach((meta) => {
       meta.prereqs = meta.prereqs.filter((pr) => validCodes.has(pr));
     });
+
+    map.forEach((meta) => {
+      meta.dependentCount = 0;
+    });
+
+    map.forEach((meta) => {
+      meta.prereqs.forEach((pr) => {
+        const prereqMeta = map.get(pr);
+        if (prereqMeta) {
+          prereqMeta.dependentCount += 1;
+        }
+      });
+    });
     return map;
+  }
+
+  private extractCurrentSemesterOverrides(proyeccion: ProyeccionDto): Map<string, CourseBoxDto> {
+    const overrides = new Map<string, CourseBoxDto>();
+    if (!proyeccion || !Array.isArray(proyeccion.years)) return overrides;
+    const currentYear = proyeccion.years.find((year) => year.yearIndex === 0);
+    if (!currentYear) return overrides;
+    const semesters = currentYear.semesters || [];
+    if (semesters.length === 0) return overrides;
+    const targetSemester = semesters[semesters.length - 1];
+    if (!targetSemester) return overrides;
+
+    targetSemester.courses.forEach((course) => {
+      const code = this.normalize(course.code);
+      if (!code) return;
+      overrides.set(code, this.cloneCourse(course));
+    });
+
+    return overrides;
+  }
+
+  private applyOverridesToAvance(avance: ApiAvance[], overrides: Map<string, CourseBoxDto>): ApiAvance[] {
+    if (!Array.isArray(avance) || overrides.size === 0) return avance;
+    return avance.map((record) => {
+      const code = this.normalize(record.course || (record as any).codigo);
+      if (!code) return record;
+      const override = overrides.get(code);
+      if (!override) return record;
+      return {
+        ...record,
+        status: override.status ?? record.status,
+        creditos: override.creditos ?? record.creditos,
+        asignatura: override.name ?? record.asignatura,
+      };
+    });
+  }
+
+  private mergeSemesterWithOverrides(
+    semester: SemesterDto,
+    overrides: Map<string, CourseBoxDto>,
+    courseMeta: Map<string, CourseMeta>,
+  ): SemesterDto {
+    const cloned = this.cloneSemester(semester);
+    if (overrides.size === 0) {
+      return this.enrichSemester(cloned, courseMeta);
+    }
+
+    const used = new Set<string>();
+    const updatedCourses = cloned.courses.map((course) => {
+      const code = this.normalize(course.code);
+      if (!code) return this.enrichCourse(course, courseMeta);
+      const override = overrides.get(code);
+      if (!override) {
+        return this.enrichCourse(course, courseMeta);
+      }
+      used.add(code);
+      const merged: CourseBoxDto = {
+        ...course,
+        status: override.status ?? course.status,
+        creditos: override.creditos ?? course.creditos,
+        name: override.name ?? course.name,
+        id: override.id || course.id || this.makeId(),
+      };
+      return this.enrichCourse(merged, courseMeta);
+    });
+
+    overrides.forEach((override, rawCode) => {
+      const code = this.normalize(rawCode);
+      if (!code || used.has(code)) return;
+      const meta = courseMeta.get(code);
+      const merged: CourseBoxDto = {
+        id: override.id || this.makeId(),
+        code,
+        status: override.status ?? 'VACANTE',
+        creditos: override.creditos ?? meta?.credits ?? 0,
+        name: override.name ?? meta?.name,
+      };
+      updatedCourses.push(this.enrichCourse(merged, courseMeta));
+    });
+
+    return {
+      ...cloned,
+      courses: updatedCourses,
+    };
+  }
+
+
+  private applyOverridesToStudentState(
+    student: StudentState,
+    overrides: Map<string, CourseBoxDto>,
+    courseMeta: Map<string, CourseMeta>,
+  ): void {
+    if (overrides.size === 0) return;
+
+    const originalMaxLevel = student.maxLevel;
+
+    overrides.forEach((override, rawCode) => {
+      const code = this.normalize(rawCode);
+      if (!code) return;
+      const status = this.normalizePlanStatus(override.status);
+      if (status === 'REPROBADO') {
+        if (student.approved.has(code)) {
+          student.approved.delete(code);
+        }
+        const currentFailures = student.failures.get(code) ?? 0;
+        student.failures.set(code, Math.max(currentFailures, 1));
+      } else if (status === 'APROBADO' || status === 'CONVALIDADO') {
+        student.approved.add(code);
+        student.failures.delete(code);
+      }
+    });
+
+    let newApprovedCredits = 0;
+    let newMaxLevel = 0;
+    student.approved.forEach((code) => {
+      const meta = courseMeta.get(code);
+      if (!meta) return;
+      newApprovedCredits += meta.credits;
+      if (meta.level > newMaxLevel) newMaxLevel = meta.level;
+    });
+
+    student.approvedCredits = newApprovedCredits;
+    student.maxLevel = Math.max(newMaxLevel, originalMaxLevel);
+
+    const newPendingFailures = new Set<string>();
+    student.failures.forEach((count, code) => {
+      if (count > 0) {
+        newPendingFailures.add(code);
+      }
+    });
+    student.pendingFailures = newPendingFailures;
+    student.secondChanceCount = Array.from(student.failures.values()).filter((count) => count >= 2).length;
   }
 
   private buildStudentState(avance: ApiAvance[], courseMeta: Map<string, CourseMeta>): StudentState {
@@ -240,6 +462,7 @@ export class SimulationService {
     proyeccion: ProyeccionDto,
     student: StudentState,
     courseMeta: Map<string, CourseMeta>,
+    currentOverrides: Map<string, CourseBoxDto>,
   ): YearDto[] {
     const baseYears = Array.isArray(proyeccion?.years)
       ? proyeccion.years.map((year) => this.cloneYear(year))
@@ -253,7 +476,7 @@ export class SimulationService {
     futureYears.sort((a, b) => a.yearIndex - b.yearIndex);
 
     const fallbackCurrent = enrichedBase.find((y) => y.yearIndex === 0) ?? null;
-    const currentYear = this.buildCurrentYear(student, courseMeta, fallbackCurrent);
+    const currentYear = this.buildCurrentYear(student, courseMeta, fallbackCurrent, currentOverrides);
 
     return [currentYear, ...futureYears];
   }
@@ -262,14 +485,77 @@ export class SimulationService {
     years: YearDto[],
     courseMeta: Map<string, CourseMeta>,
     student: StudentState,
-  ): YearDto[] {
-    const strictResult = this.autoPopulateWithMode(years, courseMeta, student, false);
+    preferences: SimulationPreferences,
+  ): { years: YearDto[]; warnings: WarningDto[] } {
+    const strictResult = this.autoPopulateWithMode(years, courseMeta, student, false, preferences);
     if (strictResult.remainingCount === 0) {
-      return strictResult.years;
+      return { years: strictResult.years, warnings: strictResult.warnings };
     }
 
-    const relaxedResult = this.autoPopulateWithMode(years, courseMeta, student, true);
-    return relaxedResult.remainingCount <= strictResult.remainingCount ? relaxedResult.years : strictResult.years;
+    const relaxedResult = this.autoPopulateWithMode(years, courseMeta, student, true, preferences);
+
+    if (strictResult.remainingCount <= relaxedResult.remainingCount) {
+      return { years: strictResult.years, warnings: strictResult.warnings };
+    }
+
+    return { years: relaxedResult.years, warnings: relaxedResult.warnings };
+  }
+
+  private ensureFailedCoursesRetake(
+    years: YearDto[],
+    overrides: Map<string, CourseBoxDto>,
+    courseMeta: Map<string, CourseMeta>,
+  ): YearDto[] {
+    if (overrides.size === 0) return years;
+
+    let futureYears = years.filter((year) => year.yearIndex > 0);
+    if (futureYears.length === 0) {
+      const baseIndex = years.reduce((max, year) => Math.max(max, year.yearIndex), 0) + 1;
+      const newYear = this.createAutomaticYear(baseIndex);
+      years.push(newYear);
+      years.sort((a, b) => a.yearIndex - b.yearIndex);
+      futureYears = [newYear];
+    }
+
+    const firstYear = futureYears[0];
+    if (!firstYear.semesters || firstYear.semesters.length === 0) {
+      firstYear.semesters = [
+        this.enrichSemester({ label: 'Primer Semestre', courses: [] }, courseMeta),
+        this.enrichSemester({ label: 'Segundo Semestre', courses: [] }, courseMeta),
+      ];
+    }
+
+    overrides.forEach((override, rawCode) => {
+      const code = this.normalize(rawCode);
+      if (!code) return;
+      const status = this.normalizePlanStatus(override.status);
+      if (status !== 'REPROBADO') return;
+
+      const alreadyScheduled = futureYears.some((year) =>
+        year.semesters.some((semester) =>
+          semester.courses.some((course) => this.normalize(course.code) === code),
+        ),
+      );
+      if (alreadyScheduled) return;
+
+      const meta = courseMeta.get(code);
+      const targetSemester = firstYear.semesters[0] ?? this.enrichSemester({ label: 'Primer Semestre', courses: [] }, courseMeta);
+      const newCourse: CourseBoxDto = {
+        id: override.id || this.makeId(),
+        code,
+        status: 'VACANTE',
+        creditos: override.creditos ?? meta?.credits ?? 0,
+        name: override.name ?? meta?.name,
+      };
+      const updatedCourses = [...targetSemester.courses, this.enrichCourse(newCourse, courseMeta)];
+      const updatedSemester: SemesterDto = {
+        ...targetSemester,
+        courses: updatedCourses,
+      };
+      firstYear.semesters[0] = this.enrichSemester(updatedSemester, courseMeta);
+    });
+
+    return years;
   }
 
   private autoPopulateWithMode(
@@ -277,23 +563,26 @@ export class SimulationService {
     courseMeta: Map<string, CourseMeta>,
     student: StudentState,
     relaxed: boolean,
-  ): { years: YearDto[]; addedCount: number; hasFutureCourses: boolean; remainingCount: number } {
+    preferences: SimulationPreferences,
+  ): {
+    years: YearDto[];
+    addedCount: number;
+    hasFutureCourses: boolean;
+    remainingCount: number;
+    warnings: WarningDto[];
+  } {
     const clonedYears = years.map((year) => this.cloneYear(year));
     if (clonedYears.length === 0) {
-      return { years: clonedYears, addedCount: 0, hasFutureCourses: false, remainingCount: courseMeta.size };
+      return {
+        years: clonedYears,
+        addedCount: 0,
+        hasFutureCourses: false,
+        remainingCount: courseMeta.size,
+        warnings: [],
+      };
     }
 
     const sortedYears = [...clonedYears].sort((a, b) => a.yearIndex - b.yearIndex);
-
-    const scheduledCodes = new Set<string>(student.approved);
-    sortedYears.forEach((year) => {
-      year.semesters.forEach((semester) => {
-        semester.courses.forEach((course) => {
-          const code = this.normalize(course.code);
-          if (code) scheduledCodes.add(code);
-        });
-      });
-    });
 
     let maxYearIndex = sortedYears.reduce((acc, year) => Math.max(acc, year.yearIndex), 0);
     if (!sortedYears.some((year) => year.yearIndex > 0)) {
@@ -301,30 +590,50 @@ export class SimulationService {
       sortedYears.push(this.createAutomaticYear(maxYearIndex));
     }
 
+    const targetSemesterLimit = preferences.semesterLimit ?? null;
+    if (targetSemesterLimit !== null) {
+      this.enforceSemesterLimit(sortedYears, targetSemesterLimit);
+    }
+
+    const scheduledCodes = new Set<string>(student.approved);
+    sortedYears.forEach((year) => {
+      year.semesters.forEach((semester) => {
+        semester.courses.forEach((course) => {
+          const code = this.normalize(course.code);
+          if (!code) return;
+          const status = this.normalizePlanStatus(course.status);
+          const isFailedCurrent = year.yearIndex === 0 && status === 'REPROBADO';
+          if (!isFailedCurrent) {
+            scheduledCodes.add(code);
+          }
+        });
+      });
+    });
+
+    maxYearIndex = sortedYears.reduce((acc, year) => Math.max(acc, year.yearIndex), 0);
+    const semesterLimitValue = targetSemesterLimit ?? Number.POSITIVE_INFINITY;
+    let futureSemestersCount = this.countFutureSemesters(sortedYears);
+
     const planApprovals = new Set<string>(student.approved);
     let planApprovedCredits = student.approvedCredits;
     let planMaxLevel = student.maxLevel;
 
     const pendingFailures = new Set<string>(student.pendingFailures);
 
+    const comparator = this.createCourseComparator(preferences, pendingFailures);
     const remainingList = Array.from(courseMeta.values())
       .filter((meta) => !planApprovals.has(meta.code) && !scheduledCodes.has(meta.code))
-      .sort((a, b) => {
-        const failA = pendingFailures.has(a.code) ? 0 : 1;
-        const failB = pendingFailures.has(b.code) ? 0 : 1;
-        if (failA !== failB) return failA - failB;
-        if (a.level !== b.level) return a.level - b.level;
-        const creditsA = Number.isFinite(a.credits) ? Number(a.credits) : 0;
-        const creditsB = Number.isFinite(b.credits) ? Number(b.credits) : 0;
-        if (creditsA !== creditsB) return creditsB - creditsA;
-        return a.code.localeCompare(b.code);
-      });
+      .sort(comparator);
 
-    const MAX_CREDITS = 30;
+    const targetCredits = preferences.targetCredits ?? null;
+    const minTargetCredits = targetCredits?.min ?? 0;
+    const creditCap = targetCredits?.max ?? 30;
+    const maxCourses = preferences.maxCoursesPerSemester ?? null;
     const MAX_EXTRA_YEARS = 6;
     let addedYears = 0;
     let totalAdded = 0;
     let hasFutureCourses = false;
+    const warnings: WarningDto[] = [];
 
     for (let yearIdx = 0; yearIdx < sortedYears.length; yearIdx++) {
       const year = sortedYears[yearIdx];
@@ -344,16 +653,18 @@ export class SimulationService {
           if (!code) return;
           const meta = courseMeta.get(code);
           if (!meta) return;
+          const normalizedStatus = this.normalizePlanStatus(course.status);
+          const isCurrentAndFailed = year.yearIndex === 0 && normalizedStatus === 'REPROBADO';
 
           const enriched = this.enrichCourse(course, courseMeta);
           sanitizedCourses.push(enriched);
           hasFutureCourses = true;
 
-          if (!scheduledCodes.has(code)) {
+          if (!isCurrentAndFailed && !scheduledCodes.has(code)) {
             scheduledCodes.add(code);
           }
 
-          if (!planApprovals.has(code)) {
+          if (!isCurrentAndFailed && !planApprovals.has(code)) {
             semesterMetas.set(code, meta);
           }
 
@@ -363,11 +674,16 @@ export class SimulationService {
 
         for (const meta of remainingList) {
           if (scheduledCodes.has(meta.code)) continue;
+          if (maxCourses !== null && sanitizedCourses.length >= maxCourses) break;
+
           const rawCredits = Number.isFinite(meta.credits) ? Number(meta.credits) : 0;
           const credits = rawCredits;
           const effectiveCredits = credits > 0 ? credits : 0;
 
-          const allowedLevel = relaxed ? Number.POSITIVE_INFINITY : planMaxLevel === 0 ? 1 : planMaxLevel + 2;
+          const baseLevel = planMaxLevel === 0 ? 1 : planMaxLevel;
+          const allowedLevel = relaxed
+            ? Number.POSITIVE_INFINITY
+            : baseLevel + preferences.levelDispersion;
           const prereqsOk = relaxed || meta.prereqs.every((pr) => planApprovals.has(pr));
           const creditReqOk = relaxed || meta.creditRequirement <= planApprovedCredits;
           const minLevelOk = relaxed || meta.minLevelRequirement <= planMaxLevel;
@@ -375,7 +691,7 @@ export class SimulationService {
 
           if (!prereqsOk || !creditReqOk || !minLevelOk || !levelOk) continue;
 
-          const exceedsCap = effectiveCredits > 0 && creditLoad + effectiveCredits > MAX_CREDITS;
+          const exceedsCap = effectiveCredits > 0 && creditLoad + effectiveCredits > creditCap;
           const allowOversizedCourse = exceedsCap && creditLoad === 0;
           if (exceedsCap && !allowOversizedCourse) continue;
 
@@ -391,7 +707,7 @@ export class SimulationService {
           scheduledCodes.add(meta.code);
           semesterMetas.set(meta.code, meta);
           if (allowOversizedCourse) {
-            creditLoad = Math.max(MAX_CREDITS, effectiveCredits);
+            creditLoad = Math.max(creditCap, effectiveCredits);
           } else {
             creditLoad += effectiveCredits;
           }
@@ -399,11 +715,19 @@ export class SimulationService {
           coursesScheduledInYear += 1;
           hasFutureCourses = true;
 
-          if (creditLoad >= MAX_CREDITS) break;
+          if (creditLoad >= creditCap) break;
         }
 
         const enrichedSemester = this.enrichSemester({ ...semester, courses: sanitizedCourses }, courseMeta);
         year.semesters[semIdx] = enrichedSemester;
+
+        if (targetCredits && creditLoad < minTargetCredits) {
+          warnings.push({
+            yearIndex: year.yearIndex,
+            semIdx,
+            message: `No se alcanzó la carga mínima configurada (${creditLoad}/${minTargetCredits} créditos).`,
+          });
+        }
 
         semesterMetas.forEach((meta, code) => {
           if (!planApprovals.has(code)) {
@@ -425,8 +749,13 @@ export class SimulationService {
           }
 
           if (coursesScheduledInYear > 0 || relaxed) {
+            if (futureSemestersCount + 2 > semesterLimitValue) {
+              continue;
+            }
             maxYearIndex += 1;
-            sortedYears.push(this.createAutomaticYear(maxYearIndex));
+            const newYear = this.createAutomaticYear(maxYearIndex);
+            sortedYears.push(newYear);
+            futureSemestersCount += newYear.semesters.length;
             addedYears += 1;
           }
         }
@@ -435,7 +764,91 @@ export class SimulationService {
 
     const remainingCount = remainingList.filter((meta) => !scheduledCodes.has(meta.code)).length;
 
-    return { years: sortedYears, addedCount: totalAdded, hasFutureCourses, remainingCount };
+    return {
+      years: sortedYears,
+      addedCount: totalAdded,
+      hasFutureCourses,
+      remainingCount,
+      warnings,
+    };
+  }
+
+  private enforceSemesterLimit(years: YearDto[], limit: number): void {
+    if (!Number.isFinite(limit) || limit <= 0) {
+      return;
+    }
+
+    const futureYears = years
+      .filter((year) => year.yearIndex > 0)
+      .sort((a, b) => a.yearIndex - b.yearIndex);
+
+    let allowance = Math.floor(limit);
+
+    futureYears.forEach((year) => {
+      if (allowance <= 0) {
+        year.semesters = [];
+        return;
+      }
+
+      if (year.semesters.length <= allowance) {
+        allowance -= year.semesters.length;
+        return;
+      }
+
+      year.semesters = year.semesters.slice(0, allowance);
+      allowance = 0;
+    });
+
+    for (let idx = years.length - 1; idx >= 0; idx--) {
+      const year = years[idx];
+      if (year.yearIndex === 0) continue;
+      if (year.semesters.length === 0) {
+        years.splice(idx, 1);
+      }
+    }
+  }
+
+  private countFutureSemesters(years: YearDto[]): number {
+    return years
+      .filter((year) => year.yearIndex > 0)
+      .reduce((acc, year) => acc + (Array.isArray(year.semesters) ? year.semesters.length : 0), 0);
+  }
+
+  private createCourseComparator(
+    preferences: SimulationPreferences,
+    pendingFailures: Set<string>,
+  ): (a: CourseMeta, b: CourseMeta) => number {
+    return (a, b) => {
+      const scorePriority = (meta: CourseMeta): number => {
+        const isPending = pendingFailures.has(meta.code);
+        switch (preferences.priority) {
+          case 'PENDING_FIRST':
+            return isPending ? 0 : 1;
+          case 'NEW_FIRST':
+            return isPending ? 1 : 0;
+          default:
+            return 0;
+        }
+      };
+
+      const priorityDiff = scorePriority(a) - scorePriority(b);
+      if (priorityDiff !== 0) return priorityDiff;
+
+      const levelDiff = a.level - b.level;
+      if (levelDiff !== 0) return levelDiff;
+
+      if (preferences.unlockFocus) {
+        const dependentsDiff = b.dependentCount - a.dependentCount;
+        if (dependentsDiff !== 0) return dependentsDiff;
+      }
+
+      const creditsA = Number.isFinite(a.credits) ? Number(a.credits) : 0;
+      const creditsB = Number.isFinite(b.credits) ? Number(b.credits) : 0;
+      const creditDiff = creditsB - creditsA;
+      if (creditDiff !== 0) return creditDiff;
+
+      return a.code.localeCompare(b.code);
+    };
   }
 
   private createAutomaticYear(yearIndex: number): YearDto {
@@ -459,21 +872,22 @@ export class SimulationService {
     student: StudentState,
     courseMeta: Map<string, CourseMeta>,
     fallback: YearDto | null,
+    overrides: Map<string, CourseBoxDto>,
   ): YearDto {
     if (student.periodSemesters.length > 0) {
       const latest = student.periodSemesters[student.periodSemesters.length - 1];
-      const enrichedSemester = this.enrichSemester(latest.semester, courseMeta);
+      const mergedSemester = this.mergeSemesterWithOverrides(this.cloneSemester(latest.semester), overrides, courseMeta);
       return {
         yearIndex: 0,
         title: 'Semestre Actual',
-        semesters: [enrichedSemester],
+        semesters: [mergedSemester],
       };
     }
 
     if (fallback) {
       const cloned = this.cloneYear(fallback);
       cloned.yearIndex = 0;
-      cloned.semesters = cloned.semesters.map((sem) => this.enrichSemester(sem, courseMeta));
+      cloned.semesters = cloned.semesters.map((sem) => this.mergeSemesterWithOverrides(sem, overrides, courseMeta));
       return cloned;
     }
 
@@ -481,11 +895,12 @@ export class SimulationService {
       yearIndex: 0,
       title: 'Semestre Actual',
       semesters: [
-        this.enrichSemester(
+        this.mergeSemesterWithOverrides(
           {
             label: 'Semestre Actual',
             courses: [],
           },
+          overrides,
           courseMeta,
         ),
       ],

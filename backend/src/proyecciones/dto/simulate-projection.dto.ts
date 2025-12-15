@@ -1,12 +1,16 @@
-import { IsString, IsNotEmpty, IsArray, ValidateNested, IsNumber, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  ValidateNested,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  Min,
+  Max,
+  IsIn,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-
-export class SimulateProjectionDto {
-  rut: string;
-  codCarrera: string;
-  catalogo: string;
-  proyeccionActual: ProyeccionDto;
-}
 
 export class ProyeccionDto {
   @IsString()
@@ -22,7 +26,7 @@ export class ProyeccionDto {
 }
 
 export class YearDto {
- @IsNumber()
+  @IsNumber()
   yearIndex: number;
 
   @IsOptional()
@@ -46,7 +50,7 @@ export class SemesterDto {
 }
 
 export class CourseBoxDto {
-   @IsString()
+  @IsString()
   @IsNotEmpty()
   id: string;
 
@@ -65,6 +69,61 @@ export class CourseBoxDto {
   @IsOptional()
   @IsString()
   name?: string;
+}
+
+export class SimulationPreferencesDto {
+  @IsOptional()
+  @Min(1)
+  @Max(8)
+  @IsNumber()
+  maxCoursesPerSemester?: number;
+
+  @IsOptional()
+  @IsIn(['LOW', 'MEDIUM', 'HIGH'])
+  targetLoad?: 'LOW' | 'MEDIUM' | 'HIGH';
+
+  @IsOptional()
+  @IsIn(['PENDING_FIRST', 'NEW_FIRST', 'BALANCED'])
+  priority?: 'PENDING_FIRST' | 'NEW_FIRST' | 'BALANCED';
+
+  @IsOptional()
+  @IsBoolean()
+  unlockFocus?: boolean;
+
+  @IsOptional()
+  @Min(0)
+  @Max(2)
+  @IsNumber()
+  levelDispersion?: number;
+
+  @IsOptional()
+  @Min(1)
+  @Max(12)
+  @IsNumber()
+  semesterLimit?: number;
+}
+
+export class SimulateProjectionDto {
+  @IsString()
+  @IsNotEmpty()
+  rut: string;
+
+  @IsString()
+  @IsNotEmpty()
+  codCarrera: string;
+
+  @IsString()
+  @IsNotEmpty()
+  catalogo: string;
+
+  @ValidateNested()
+  @Type(() => ProyeccionDto)
+  proyeccionActual: ProyeccionDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SimulationPreferencesDto)
+  preferences?: SimulationPreferencesDto;
 }
 
 export class SimulationResultDto {

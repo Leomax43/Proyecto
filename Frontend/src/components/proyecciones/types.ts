@@ -23,3 +23,14 @@ export type Projection = {
   createdAt: number;
   years: YearSim[];
 };
+
+export type SimulationLoad = 'LOW' | 'MEDIUM' | 'HIGH';
+export type SimulationPriority = 'PENDING_FIRST' | 'NEW_FIRST' | 'BALANCED';
+export type SimulationPreferences = {
+  maxCoursesPerSemester?: number | null;
+  targetLoad?: SimulationLoad | null;
+  priority?: SimulationPriority | null;
+  unlockFocus?: boolean;
+  levelDispersion?: number | null;
+  semesterLimit?: number | null;
+};
