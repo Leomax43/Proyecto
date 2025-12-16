@@ -9,48 +9,20 @@ interface Carrera {
   catalogo: string;
 }
 
-// --- Lógica para leer datos del localStorage ---
-const userRole = localStorage.getItem('rol');
-
-// Obtener nombre del usuario preferentemente desde 'nombre' o desde el email (parte antes del @)
-const storedName = localStorage.getItem('nombre');
-const storedEmail = localStorage.getItem('email') || localStorage.getItem('correo') || localStorage.getItem('userEmail');
-
-let userName = 'Nombre de usuario';
-if (storedName) {
-  userName = storedName;
-} else if (storedEmail && storedEmail.includes('@')) {
-  const localPart = storedEmail.split('@')[0];
-  const nameParts = localPart.replace(/[_\.]+/g, ' ').split(' ').filter(Boolean);
-  userName = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
-} else {
-  // fallback: mostrar RUT si no hay nombre ni correo
-  const userRut = localStorage.getItem('rut');
-  if (userRut) userName = `RUT: ${userRut}`;
-}
-
-// Leemos el nombre de la carrera
-let careerName = "Carrera del usuario";
-const carrerasString = localStorage.getItem('carreras');
-
-if (carrerasString) {
-  try {
-    const carreras: Carrera[] = JSON.parse(carrerasString);
-    if (carreras && carreras.length > 0) {
-      careerName = carreras[0].nombre; // Mostramos la primera carrera
-    }
-  } catch (error) {
-    console.error("Error al parsear carreras en Sidebar:", error);
-  }
-}
-
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
+
+  // 1. ESTADO: Inicializamos leyendo de localStorage DENTRO del componente
+  // Esto asegura que leamos el valor actualizado después del Login
+  const [userName, setUserName] = useState<string>('Nombre de usuario');
+  const [careerName, setCareerName] = useState<string>('Carrera del usuario');
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
   const [avatarUrl, setAvatarUrl] = useState<string>(() => localStorage.getItem('avatarUrl') || defaultAvatar);
   const [editingAvatar, setEditingAvatar] = useState<boolean>(false);
   const [tempAvatarUrl, setTempAvatarUrl] = useState<string>('');
+  
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem('sidebarCollapsed');
@@ -59,6 +31,41 @@ const Sidebar: React.FC = () => {
       return false;
     }
   });
+
+  // 2. EFECTO: Cargar datos del usuario al montar el componente
+  useEffect(() => {
+    // Leer Rol
+    setUserRole(localStorage.getItem('rol'));
+
+    // Leer Nombre
+    const storedName = localStorage.getItem('nombre');
+    const storedEmail = localStorage.getItem('email') || localStorage.getItem('correo') || localStorage.getItem('userEmail');
+    const userRut = localStorage.getItem('rut');
+
+    if (storedName) {
+      setUserName(storedName);
+    } else if (storedEmail && storedEmail.includes('@')) {
+      const localPart = storedEmail.split('@')[0];
+      const nameParts = localPart.replace(/[_\.]+/g, ' ').split(' ').filter(Boolean);
+      const formattedName = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+      setUserName(formattedName);
+    } else if (userRut) {
+      setUserName(`RUT: ${userRut}`);
+    }
+
+    // Leer Carrera
+    const carrerasString = localStorage.getItem('carreras');
+    if (carrerasString) {
+      try {
+        const carreras: Carrera[] = JSON.parse(carrerasString);
+        if (carreras && carreras.length > 0) {
+          setCareerName(carreras[0].nombre);
+        }
+      } catch (error) {
+        console.error("Error al parsear carreras en Sidebar:", error);
+      }
+    }
+  }, []); // Se ejecuta una vez al aparecer el Sidebar
 
   useEffect(() => {
     try {
@@ -69,11 +76,9 @@ const Sidebar: React.FC = () => {
   }, [collapsed]);
 
   useEffect(() => {
-    // keep localStorage in sync if avatarUrl changes
     if (avatarUrl && avatarUrl !== defaultAvatar) {
       localStorage.setItem('avatarUrl', avatarUrl);
     } else if (avatarUrl === defaultAvatar) {
-      // remove custom avatar when using default
       localStorage.removeItem('avatarUrl');
     }
   }, [avatarUrl]);
@@ -125,8 +130,6 @@ const Sidebar: React.FC = () => {
       )}
 
       <nav className="sidebar-nav" id="sidebar-nav">
-        {/* Icon definitions inline to avoid adding dependencies */}
-        {/** Simple SVG icons: grid/book, chart-up, bars **/}
         <NavLink to="/malla" data-tooltip="Malla Curricular" className={({ isActive }) => isActive ? "sidebar-btn active" : "sidebar-btn"}>
           <div className="sidebar-btn-content">
             <span className="icon" aria-hidden>

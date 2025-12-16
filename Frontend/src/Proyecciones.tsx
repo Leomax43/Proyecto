@@ -7,6 +7,8 @@ import { makeDefaultProjection, makeEmptySemester, makeId, normalize, statusCycl
 import { apiGet } from './config/api';
 import { useProjectionSimulation } from './hooks/useProjectionSimulation';
 
+const API_URL = 'http://localhost:3000/proyecciones';
+
 // API curso shape (igual que en Malla.tsx)
 type ApiCurso = {
   codigo: string;
@@ -16,7 +18,6 @@ type ApiCurso = {
   prereq?: string;
 };
 
-const STORAGE_KEY = 'proyecciones_v1';
 const PREF_KEY = 'proyecciones_auto_prefs_v1';
 const PREF_ENABLED_KEY = 'proyecciones_auto_enabled_v1';
 
@@ -80,31 +81,18 @@ function getUserCareerData() {
 }
 
 const Proyecciones: React.FC = () => {
-  const [proyecciones, setProyecciones] = useState<Projection[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      return JSON.parse(raw) as Projection[];
-    } catch {
-      return [];
-    }
-  });
-
-  const [selectedId, setSelectedId] = useState<string | null>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw) as Projection[];
-      return parsed[0]?.id ?? null;
-    } catch {
-      return null;
-    }
-  });
+  // 1. ELIMINAMOS CARGA INICIAL DE LOCALSTORAGE
+  const [proyecciones, setProyecciones] = useState<Projection[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>({ 0: true });
   const [warningsCollapsed, setWarningsCollapsed] = useState(true);
   const [allCourses, setAllCourses] = useState<ApiCurso[]>([]);
+  
+  // Estado para datos completos del usuario (necesario para guardar)
   const [userCareerData, setUserCareerData] = useState<{ rut: string; codCarrera: string; catalogo: string } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [autoPreferences, setAutoPreferences] = useState<SimulationPreferences>(() => {
     try {
       const stored = localStorage.getItem(PREF_KEY);
@@ -122,10 +110,7 @@ const Proyecciones: React.FC = () => {
     return true;
   });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(proyecciones));
-  }, [proyecciones]);
-
+  // Preferencias se siguen guardando en LocalStorage (es configuración de UI)
   useEffect(() => {
     localStorage.setItem(PREF_KEY, JSON.stringify(autoPreferences));
   }, [autoPreferences]);
@@ -134,29 +119,125 @@ const Proyecciones: React.FC = () => {
     localStorage.setItem(PREF_ENABLED_KEY, autoEnabled ? 'true' : 'false');
   }, [autoEnabled]);
 
+  // 2. CARGAR DATOS DESDE BASE DE DATOS AL INICIAR
   useEffect(() => {
-    if (proyecciones.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-    if (!selectedId) {
-      setSelectedId(proyecciones[0].id);
-    }
-  }, [proyecciones, selectedId]);
+    const fetchInitialData = async () => {
+      try {
+        const carrerasString = localStorage.getItem('carreras');
+        const rut = localStorage.getItem('rut');
+        if (!carrerasString || !rut) return;
+        
+        const carreras = JSON.parse(carrerasString);
+        if (!Array.isArray(carreras) || carreras.length === 0) return;
+        const carreraActual = carreras[0];
+        
+        if (!carreraActual?.codigo || !carreraActual?.catalogo) return;
+        
+        // Guardamos datos vitales para el guardado posterior
+        setUserCareerData({ rut, codCarrera: carreraActual.codigo, catalogo: carreraActual.catalogo });
+
+        // Cargar Malla
+        const mallaData = await apiGet(
+          `/ucn/malla?codigo=${encodeURIComponent(carreraActual.codigo)}&catalogo=${encodeURIComponent(carreraActual.catalogo)}`,
+        );
+        if (Array.isArray(mallaData)) setAllCourses(mallaData as ApiCurso[]);
+
+        // Cargar Proyecciones desde BD
+        const resp = await fetch(`${API_URL}/user/${rut}`);
+        if (resp.ok) {
+          const dbProjections = await resp.json();
+          // Mapeamos la respuesta de la BD al formato del frontend
+          const mappedProjections: Projection[] = dbProjections.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            createdAt: new Date(p.createdAt).getTime(),
+            years: p.years // El JSON que guardamos en Postgres
+          }));
+          
+          setProyecciones(mappedProjections);
+          
+          // Seleccionar la primera si no hay nada seleccionado
+          if (mappedProjections.length > 0 && !selectedId) {
+            setSelectedId(mappedProjections[0].id);
+          }
+        }
+      } catch (e) {
+        console.error("Error cargando datos iniciales:", e);
+      }
+    };
+    fetchInitialData();
+  }, []); // Solo al inicio
 
   const selected = useMemo(
     () => proyecciones.find((projection) => projection.id === selectedId) ?? null,
     [proyecciones, selectedId],
   );
 
+  // 3. FUNCIÓN CENTRALIZADA PARA GUARDAR EN BD
+  const saveProjectionToBackend = async (projToSave: Projection) => {
+    if (!userCareerData) return;
+    setIsSaving(true);
+
+    const dto = {
+      rut: userCareerData.rut,
+      codCarrera: userCareerData.codCarrera,
+      catalogo: userCareerData.catalogo,
+      proyeccionActual: projToSave,
+      // Opcional: Si quieres guardar preferencias en BD también, agrégalas al DTO
+      // preferences: autoPreferences 
+    };
+
+    try {
+      // Si el ID es largo (UUID), existe en BD -> PUT
+      // Si es corto (random), es nuevo -> POST
+      const isExisting = projToSave.id.length > 10; 
+
+      if (isExisting) {
+        await fetch(`${API_URL}/${projToSave.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dto)
+        });
+      } else {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dto)
+        });
+        const savedEntity = await res.json();
+        
+        // Actualizamos ID local con el real de la BD
+        setProyecciones(prev => prev.map(p => 
+          p.id === projToSave.id ? { ...p, id: savedEntity.id } : p
+        ));
+        if (selectedId === projToSave.id) setSelectedId(savedEntity.id);
+      }
+    } catch (e) {
+      console.error("Error guardando proyección:", e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // --- MODIFICADORES DE ESTADO (Ahora llaman a guardar) ---
+
   const createNew = () => {
     const projection = makeDefaultProjection();
     setProyecciones((prev) => [...prev, projection]);
     setSelectedId(projection.id);
     setExpandedYears({ [projection.years[0]?.yearIndex ?? 0]: true });
+    // Guardar inmediatamente para crear registro
+    saveProjectionToBackend(projection);
   };
 
-  const removeProjection = (id: string) => {
+  const removeProjection = async (id: string) => {
+    // Eliminar de BD
+    try {
+      await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error("Error eliminando:", e);
+    }
+    // Eliminar de estado local
     setProyecciones((prev) => {
       const filtered = prev.filter((projection) => projection.id !== id);
       if (id === selectedId) {
@@ -167,53 +248,39 @@ const Proyecciones: React.FC = () => {
   };
 
   const renameProjection = (id: string, title: string) => {
-    setProyecciones((prev) =>
-      prev.map((projection) => (projection.id === id ? { ...projection, title } : projection)),
-    );
+    const currentProj = proyecciones.find(p => p.id === id);
+    if (!currentProj) return;
+
+    const updatedProj = { ...currentProj, title };
+    setProyecciones(prev => prev.map(p => p.id === id ? updatedProj : p));
+    
+    // Guardar cambios
+    saveProjectionToBackend(updatedProj);
   };
 
   const addYearToProjection = (id: string) => {
-    setProyecciones((prev) =>
-      prev.map((projection) => {
-        if (projection.id !== id) return projection;
-        const nextIndex = projection.years.reduce((max, year) => Math.max(max, year.yearIndex), 0) + 1;
-        const newYear = {
-          yearIndex: nextIndex,
-          title: nextIndex === 0 ? 'Semestre Actual' : `Año Simulado ${nextIndex}`,
-          semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')],
-        };
-        return {
-          ...projection,
-          years: [...projection.years, newYear].sort((a, b) => a.yearIndex - b.yearIndex),
-        };
-      }),
-    );
+    const currentProj = proyecciones.find(p => p.id === id);
+    if (!currentProj) return;
+
+    const nextIndex = currentProj.years.reduce((max, year) => Math.max(max, year.yearIndex), 0) + 1;
+    const newYear = {
+      yearIndex: nextIndex,
+      title: nextIndex === 0 ? 'Semestre Actual' : `Año Simulado ${nextIndex}`,
+      semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')],
+    };
+    
+    const updatedProj = {
+      ...currentProj,
+      years: [...currentProj.years, newYear].sort((a, b) => a.yearIndex - b.yearIndex),
+    };
+
+    setProyecciones(prev => prev.map(p => p.id === id ? updatedProj : p));
+    saveProjectionToBackend(updatedProj);
   };
 
   const toggleYear = (idx: number) => setExpandedYears((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
-  useEffect(() => {
-    const fetchMalla = async () => {
-      try {
-        const carrerasString = localStorage.getItem('carreras');
-        const rut = localStorage.getItem('rut');
-        if (!carrerasString || !rut) return;
-        const carreras = JSON.parse(carrerasString);
-        if (!Array.isArray(carreras) || carreras.length === 0) return;
-        const carreraActual = carreras[0];
-        if (!carreraActual?.codigo || !carreraActual?.catalogo) return;
-        setUserCareerData({ rut, codCarrera: carreraActual.codigo, catalogo: carreraActual.catalogo });
-        const data = await apiGet(
-          `/ucn/malla?codigo=${encodeURIComponent(carreraActual.codigo)}&catalogo=${encodeURIComponent(carreraActual.catalogo)}`,
-        );
-        if (Array.isArray(data)) setAllCourses(data as ApiCurso[]);
-      } catch {
-        /* noop */
-      }
-    };
-    fetchMalla();
-  }, []);
-
+  // Simulacion (Hook conectado al nuevo servicio robusto)
   const { simulatedYears, isSimulating, simulationError, warnings: simulationWarnings } = useProjectionSimulation(
     selected,
     userCareerData?.rut ?? null,
@@ -221,7 +288,6 @@ const Proyecciones: React.FC = () => {
     userCareerData?.catalogo ?? null,
     autoEnabled ? autoPreferences : null,
   );
-
 
   const displayYears = useMemo(() => {
     const source = simulatedYears.length > 0 ? simulatedYears : selected?.years ?? [];
@@ -239,8 +305,10 @@ const Proyecciones: React.FC = () => {
             return acc;
           }
           const normalizedCode = normalize(codeTrim);
+          // Evitar duplicados visuales si el backend mandó basura antigua
           const exists = acc.some((existing) => normalize(existing.code || '') === normalizedCode);
           if (exists) return acc;
+          
           acc.push({
             ...course,
             name: course.name ?? nameMap.get(normalizedCode),
@@ -252,6 +320,7 @@ const Proyecciones: React.FC = () => {
     }));
   }, [simulatedYears, selected, allCourses]);
 
+  // 4. TOGGLE COURSE (Guardar en BD)
   const toggleCourseByKey = (projId: string, yearIndex: number, semIdx: number, key: string) => {
     const [idPart, codePart = ''] = key.split('||');
     const normalizedCodeKey = normalize(codePart);
@@ -262,80 +331,76 @@ const Proyecciones: React.FC = () => {
       return matchesId || matchesCode;
     });
 
-    setProyecciones((prev) =>
-      prev.map((projection) => {
-        if (projection.id !== projId) return projection;
+    // Encontramos la proyección
+    const projectionToUpdate = proyecciones.find(p => p.id === projId);
+    if (!projectionToUpdate) return;
 
-        let years = projection.years;
-        if (!years.some((year) => year.yearIndex === yearIndex)) {
-          const newYear = {
-            yearIndex,
-            title: yearIndex === 0 ? 'Semestre Actual' : `Año Simulado ${yearIndex}`,
-            semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')],
-          };
-          years = [...years, newYear].sort((a, b) => a.yearIndex - b.yearIndex);
+    // Clonamos estructura para editar
+    // IMPORTANTE: Clonamos profundamente para no mutar estado directamente
+    const currentYears = projectionToUpdate.years.map(y => ({
+        ...y,
+        semesters: y.semesters.map(s => ({ ...s, courses: s.courses.map(c => ({...c})) }))
+    }));
+
+    // Aseguramos que el año exista
+    if (!currentYears.some((year) => year.yearIndex === yearIndex)) {
+      const newYear = {
+        yearIndex,
+        title: yearIndex === 0 ? 'Semestre Actual' : `Año Simulado ${yearIndex}`,
+        semesters: [makeEmptySemester('Primer Semestre'), makeEmptySemester('Segundo Semestre')],
+      };
+      currentYears.push(newYear);
+      currentYears.sort((a, b) => a.yearIndex - b.yearIndex);
+    }
+
+    let updated = false;
+
+    // BARRIDO 1: Intentar actualizar existente
+    for (const year of currentYears) {
+        if (year.yearIndex !== yearIndex) continue;
+        
+        // Asegurar semestres
+        while (year.semesters.length <= semIdx) {
+            year.semesters.push(makeEmptySemester(`Semestre ${year.semesters.length + 1}`));
         }
 
-        const updatedYears = years.map((year) => {
-          if (year.yearIndex !== yearIndex) return year;
-
-          const semesters = [...year.semesters];
-          let structureChanged = false;
-          let targetSemIdx = semIdx;
-          while (semesters.length <= targetSemIdx) {
-            semesters.push(makeEmptySemester(`Semestre adicional ${semesters.length + 1}`));
-            structureChanged = true;
-          }
-          if (year.yearIndex === 0) {
-            targetSemIdx = Math.max(0, semesters.length - 1);
-          }
-
-          let toggled = false;
-          const newSemesters = semesters.map((semester, index) => {
-            if (index !== targetSemIdx) {
-              return structureChanged ? { ...semester } : semester;
+        const semester = year.semesters[semIdx];
+        
+        // Buscar y actualizar
+        for (const course of semester.courses) {
+            const matchId = idPart && course.id === idPart;
+            const matchCode = normalizedCodeKey && normalize(course.code) === normalizedCodeKey;
+            
+            if (matchId || matchCode) {
+                course.status = statusCycle(course.status);
+                // Fix code if missing
+                if (!course.code && normalizedCodeKey) course.code = normalizedCodeKey;
+                updated = true;
+                break; 
             }
-
-            const courses = semester.courses.map((course) => {
-              if (toggled) return course;
-              const matchesId = idPart ? course.id === idPart : false;
-              const matchesCode = normalizedCodeKey ? normalize(course.code) === normalizedCodeKey : false;
-              if (matchesId || matchesCode) {
-                toggled = true;
-                return { ...course, status: statusCycle(course.status) };
-              }
-              return course;
-            });
-
-            if (!toggled && displayCourse && displayCourse.code) {
-              const nextStatus = statusCycle(displayCourse.status);
-              courses.push({
+        }
+        
+        // Si no estaba, lo agregamos (BARRIDO 2 implícito)
+        if (!updated && displayCourse && displayCourse.code) {
+             const nextStatus = statusCycle(displayCourse.status);
+             semester.courses.push({
                 id: displayCourse.id || makeId(),
                 code: displayCourse.code,
                 status: nextStatus,
                 creditos: displayCourse.creditos,
                 name: displayCourse.name,
-              });
-              toggled = true;
-            }
+             });
+             updated = true;
+        }
+    }
 
-            return { ...semester, courses };
-          });
-
-          if (!structureChanged && !toggled) return year;
-
-          return {
-            ...year,
-            semesters: newSemesters,
-          };
-        });
-
-        return {
-          ...projection,
-          years: updatedYears,
-        };
-      }),
-    );
+    const finalUpdatedProj = { ...projectionToUpdate, years: currentYears };
+    
+    // Actualizar Estado
+    setProyecciones(prev => prev.map(p => p.id === projId ? finalUpdatedProj : p));
+    
+    // Guardar en BD
+    saveProjectionToBackend(finalUpdatedProj);
   };
 
   // --- RENDER ---
@@ -412,15 +477,17 @@ const Proyecciones: React.FC = () => {
       };
     });
 
+    const updatedProj = { ...selected, years: clonedYears };
     setProyecciones((prev) =>
       prev.map((projection) => {
         if (projection.id !== selected.id) return projection;
-        return {
-          ...projection,
-          years: clonedYears,
-        };
+        return updatedProj;
       }),
     );
+    
+    // Guardar también la proyección automática aplicada
+    saveProjectionToBackend(updatedProj);
+
     setExpandedYears(
       clonedYears.reduce<Record<number, boolean>>((acc, year) => {
         acc[year.yearIndex] = true;
@@ -438,7 +505,7 @@ const Proyecciones: React.FC = () => {
         <div className="proyecciones-container">
           <header className="proyecciones-header">
             <div>
-              <h1>Proyección</h1>
+              <h1>Proyección {isSaving && <span style={{fontSize: '0.6em', color: '#888'}}>(Guardando...)</span>}</h1>
               <div className="proyecciones-sub">{userName} · {careerName}</div>
             </div>
             <div className="proyecciones-actions">
@@ -446,6 +513,7 @@ const Proyecciones: React.FC = () => {
               <button className="btn" onClick={createNew}>Nueva Proyección</button>
             </div>
           </header>
+          {/* ... Mismo panel de configuración de preferencias ... */}
           <section className="auto-config-card" aria-label="Configuración de proyección automática">
             <div className="auto-config-header">
               <label className="auto-config-toggle">
@@ -542,7 +610,7 @@ const Proyecciones: React.FC = () => {
                 {proyecciones.map(p => (
                   <li key={p.id} className={p.id === selectedId ? 'proj-item active' : 'proj-item'} onClick={() => setSelectedId(p.id)}>
                     <div className="proj-title">{p.title}</div>
-                    <div className="proj-meta">{new Date(p.createdAt).toLocaleString()}</div>
+                    <div className="proj-meta">{new Date(p.createdAt).toLocaleDateString()}</div>
                   </li>
                 ))}
               </ul>
@@ -563,7 +631,7 @@ const Proyecciones: React.FC = () => {
                     <div className="simulation-indicator" role="status" aria-live="polite">
                       <div className="simulation-indicator-bubble">
                         <span className="simulation-spinner" aria-hidden="true" />
-                        Calculando proyección…
+                        Calculando proyección...
                       </div>
                     </div>
                   )}

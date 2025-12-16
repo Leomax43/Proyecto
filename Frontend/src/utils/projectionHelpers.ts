@@ -15,7 +15,13 @@ export const makeDefaultProjection = (title = 'Proyección nueva'): Projection =
   return { id: makeId(), title, createdAt: Date.now(), years };
 };
 
-export const normalize = (s?: string) => (s || '').toString().trim().toUpperCase();
+// --- CORRECCIÓN CRÍTICA AQUÍ ---
+export const normalize = (s?: string) => {
+  if (!s) return '';
+  // Elimina espacios, guiones y puntos. EJ: "ECIN-001" -> "ECIN001"
+  return s.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+};
+// -------------------------------
 
 export const statusCycle = (s?: string) => {
   const order = ['VACANTE', 'APROBADO', 'REPROBADO'];
