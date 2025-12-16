@@ -96,7 +96,7 @@ export class SimulationService {
   }
 
   // =================================================================================================
-  // LÓGICA CORE: POBLADO INTELIGENTE (FIX: REPROBADOS SE RECUPERAN)
+  // LÓGICA CORE: POBLADO INTELIGENTE (FIX TEMPORALIDAD ESTRICTA)
   // =================================================================================================
 
   private autoPopulateSmart(
@@ -125,17 +125,13 @@ export class SimulationService {
     let simCredits = initialState.approvedCredits;
     let simMaxLevel = initialState.maxLevel;
     
-    // Registro global de qué hemos agendado EXITOSAMENTE para NO REPETIR
     const globalScheduled = new Set<string>();
-
     initialState.approved.forEach(code => globalScheduled.add(code));
     
-    // Marcar lo que ya viene en la proyección futura, PERO SOLO SI NO ESTÁ REPROBADO
-    // Si viene reprobado manualmente, no lo agregamos a globalScheduled para que vuelva a salir.
+    // Marcamos lo futuro como agendado, PERO NO LO APROBAMOS AÚN
     sortedYears.forEach(y => y.semesters.forEach(s => s.courses.forEach(c => {
       const code = this.normalize(c.code);
       const status = this.normalizePlanStatus(c.status);
-      // CORRECCIÓN 1: Solo marcamos como "ya agendado" si no es reprobado
       if (code && status !== 'REPROBADO') {
         globalScheduled.add(code);
       }
@@ -154,61 +150,42 @@ export class SimulationService {
       for (const semester of year.semesters) {
         const keptCourses: CourseBoxDto[] = [];
         let currentLoad = 0;
-        
-        // Set local para no duplicar EL MISMO RAMO en el MISMO SEMESTRE
-        // (Ej: No poner Fisica I reprobado y Fisica I vacante juntos)
         const semesterCodes = new Set<string>();
 
-        // 1. Procesar Cursos Manuales Existentes
+        // 1. Procesar Cursos Manuales (SIN AGREGAR A simApproved AÚN)
         semester.courses.forEach(c => {
           const code = this.normalize(c.code);
           const meta = courseMeta.get(code);
           if (meta) {
-            // Asegurar ID
             if (!c.id || !c.id.startsWith('AUTO-')) c.id = `MANUAL-${code}`;
             
             keptCourses.push(c);
             currentLoad += meta.credits;
             semesterCodes.add(code);
             
+            // Importante: No agregamos a simApproved aquí.
+            // Si tomo Estadística ahora, NO cuenta como requisito cumplido para este mismo semestre.
             const status = this.normalizePlanStatus(c.status);
-
-            // CORRECCIÓN 2: Lógica de Aprobación Simulada
-            // Solo si NO es reprobado, asumimos que se aprueba y desbloquea el futuro
             if (status !== 'REPROBADO') {
-               if (!simApproved.has(code)) {
-                  simApproved.add(code);
-                  simCredits += meta.credits;
-                  if (meta.level > simMaxLevel) simMaxLevel = meta.level;
-               }
-               // Si no es reprobado, ya está cubierto, no sugerir de nuevo
-               globalScheduled.add(code);
-            } else {
-               // Si ES reprobado, NO lo agregamos a simApproved ni globalScheduled.
-               // Esto significa que para el PRÓXIMO semestre, volverá a ser candidato.
+               globalScheduled.add(code); 
             }
           }
         });
 
-        // 2. BUSCAR CANDIDATOS (Aquí Fisica I volverá a aparecer si fue reprobado antes)
+        // 2. BUSCAR CANDIDATOS (Usando simApproved que SOLO tiene lo histórico/anterior)
         const candidates = Array.from(courseMeta.values()).filter(meta => {
-          // A. Que no esté agendado exitosamente en el pasado/futuro
           if (globalScheduled.has(meta.code)) return false;
-          
-          // B. Que no esté ya en ESTE semestre (para no duplicar al reprobado)
           if (semesterCodes.has(meta.code)) return false; 
           
-          // C. Que cumpla prerrequisitos (ESTRICTO)
           const prereqsMet = meta.prereqs.every(req => simApproved.has(req));
           if (!prereqsMet) return false;
 
-          // D. Créditos
           if (meta.creditRequirement > simCredits) return false;
 
           return true;
         });
 
-        // 3. ORDENAR CANDIDATOS
+        // 3. ORDENAR
         candidates.sort((a, b) => {
           const levelDiff = a.level - b.level;
           if (levelDiff !== 0) return levelDiff; 
@@ -220,10 +197,8 @@ export class SimulationService {
         // 4. LLENAR EL SEMESTRE
         for (const meta of candidates) {
           if (keptCourses.length >= MAX_COURSES) break;
-          
           const newLoad = currentLoad + meta.credits;
           const isSingleGiant = keptCourses.length === 0 && meta.credits >= 20;
-          
           if (newLoad > MAX_CREDITS && !isSingleGiant) continue;
 
           keptCourses.push({
@@ -234,8 +209,7 @@ export class SimulationService {
             status: 'VACANTE'
           });
 
-          // Actualizar estados
-          globalScheduled.add(meta.code); // Lo marcamos para que no salga en el siguiente loop
+          globalScheduled.add(meta.code);
           semesterCodes.add(meta.code);
           currentLoad += meta.credits;
           coursesAddedThisYear++;
@@ -243,8 +217,8 @@ export class SimulationService {
 
         semester.courses = keptCourses;
 
-        // Simular aprobación inmediata para el futuro
-        // (Asumimos que los automáticos VACANTES se aprueban)
+        // 5. AHORA SÍ: ACTUALIZAR simApproved PARA EL FUTURO (SIGUIENTE ITERACIÓN)
+        // Recién aquí "aprobamos" los ramos de este semestre para que sirvan de requisito en el siguiente.
         keptCourses.forEach(c => {
           const code = this.normalize(c.code);
           const meta = courseMeta.get(code);
@@ -258,7 +232,7 @@ export class SimulationService {
         });
       }
 
-      // 5. AGREGAR AÑOS SI FALTAN RAMOS
+      // 6. AGREGAR AÑOS SI FALTAN RAMOS
       if (i === sortedYears.length - 1) {
         const remaining = Array.from(courseMeta.values()).filter(m => !globalScheduled.has(m.code));
         if (remaining.length > 0) {
@@ -326,9 +300,6 @@ export class SimulationService {
       });
     });
 
-    map.forEach(meta => {
-      meta.prereqs = meta.prereqs.filter(pr => validCodes.has(pr));
-    });
     return map;
   }
 
