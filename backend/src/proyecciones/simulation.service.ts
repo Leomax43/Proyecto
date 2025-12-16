@@ -98,9 +98,14 @@ export class SimulationService {
   simulate(proyeccion: ProyeccionDto, allCourses: ApiCurso[], allAvance: ApiAvance[]): SimulationResultDto {
     const courseMeta = this.buildCourseMeta(allCourses || []);
     const studentState = this.buildStudentState(allAvance || [], courseMeta);
-    const initialYears = this.prepareInitialYears(proyeccion, studentState, courseMeta);
+    
+    // 1. Línea de tiempo base (Historia)
+    const initialYears = this.prepareTimeline(proyeccion, studentState, courseMeta);
+    
+    // 2. Relleno automático (Futuro)
     const populatedYears = this.autoPopulateFutureYears(initialYears, courseMeta, studentState);
 
+    // 3. Procesamiento de reglas
     const warnings: WarningDto[] = [];
     const processedYears = this.processYears(populatedYears, courseMeta, studentState, warnings);
 
@@ -236,26 +241,50 @@ export class SimulationService {
     };
   }
 
-  private prepareInitialYears(
+  private prepareTimeline(
     proyeccion: ProyeccionDto,
     student: StudentState,
     courseMeta: Map<string, CourseMeta>,
   ): YearDto[] {
-    const baseYears = Array.isArray(proyeccion?.years)
-      ? proyeccion.years.map((year) => this.cloneYear(year))
-      : [];
-    const enrichedBase = baseYears.map((year) => ({
-      ...year,
-      semesters: year.semesters.map((sem) => this.enrichSemester(sem, courseMeta)),
-    }));
+    const yearsMap = new Map<number, SemesterDto[]>();
+    
+    student.periodSemesters.forEach(({ period, semester }) => {
+      const yearNum = parseInt(period.substring(0, 4), 10);
+      if (!isNaN(yearNum)) {
+        if (!yearsMap.has(yearNum)) {
+          yearsMap.set(yearNum, []);
+        }
+        yearsMap.get(yearNum)!.push(this.enrichSemester(semester, courseMeta));
+      }
+    });
 
-    const futureYears = enrichedBase.filter((y) => y.yearIndex !== 0);
-    futureYears.sort((a, b) => a.yearIndex - b.yearIndex);
+    const historicalYears: YearDto[] = Array.from(yearsMap.keys())
+      .sort((a, b) => a - b)
+      .map(yearNum => ({
+        yearIndex: yearNum,
+        title: `Año ${yearNum}`,
+        semesters: yearsMap.get(yearNum)!
+      }));
 
-    const fallbackCurrent = enrichedBase.find((y) => y.yearIndex === 0) ?? null;
-    const currentYear = this.buildCurrentYear(student, courseMeta, fallbackCurrent);
+    const lastHistoricalYear = historicalYears.length > 0 
+      ? historicalYears[historicalYears.length - 1].yearIndex 
+      : new Date().getFullYear(); 
+    
+    const futureYears: YearDto[] = [];
 
-    return [currentYear, ...futureYears];
+    if (proyeccion && Array.isArray(proyeccion.years)) {
+        const manualFutureYears = proyeccion.years.filter(y => y.yearIndex > lastHistoricalYear);
+        manualFutureYears.forEach(y => {
+            futureYears.push({
+                ...y,
+                yearIndex: y.yearIndex,
+                title: y.title || `Año Simulado ${y.yearIndex}`,
+                semesters: y.semesters.map(s => this.enrichSemester(s, courseMeta))
+            });
+        });
+    }
+
+    return [...historicalYears, ...futureYears].sort((a, b) => a.yearIndex - b.yearIndex);
   }
 
   private autoPopulateFutureYears(
@@ -272,6 +301,7 @@ export class SimulationService {
     return relaxedResult.remainingCount <= strictResult.remainingCount ? relaxedResult.years : strictResult.years;
   }
 
+  // --- AQUÍ ESTÁ LA MAGIA DEL "PUENTE TEMPORAL" ---
   private autoPopulateWithMode(
     years: YearDto[],
     courseMeta: Map<string, CourseMeta>,
@@ -279,13 +309,28 @@ export class SimulationService {
     relaxed: boolean,
   ): { years: YearDto[]; addedCount: number; hasFutureCourses: boolean; remainingCount: number } {
     const clonedYears = years.map((year) => this.cloneYear(year));
+    
+    // Si la lista está vacía, creamos el año actual
     if (clonedYears.length === 0) {
-      return { years: clonedYears, addedCount: 0, hasFutureCourses: false, remainingCount: courseMeta.size };
+        clonedYears.push(this.createAutomaticYear(new Date().getFullYear()));
     }
 
     const sortedYears = [...clonedYears].sort((a, b) => a.yearIndex - b.yearIndex);
 
-    const scheduledCodes = new Set<string>(student.approved);
+    // --- PUENTE TEMPORAL ---
+    // Si la historia terminó hace tiempo (ej: 2020) y estamos en 2025,
+    // rellenamos los años intermedios para que la simulación pueda llegar al presente.
+    let lastYearIndex = sortedYears[sortedYears.length - 1].yearIndex;
+    const currentYear = new Date().getFullYear();
+
+    while (lastYearIndex < currentYear) {
+      lastYearIndex++;
+      sortedYears.push(this.createAutomaticYear(lastYearIndex));
+    }
+    // --- FIN PUENTE ---
+
+    const scheduledCodes = new Set<string>();
+    
     sortedYears.forEach((year) => {
       year.semesters.forEach((semester) => {
         semester.courses.forEach((course) => {
@@ -295,16 +340,10 @@ export class SimulationService {
       });
     });
 
-    let maxYearIndex = sortedYears.reduce((acc, year) => Math.max(acc, year.yearIndex), 0);
-    if (!sortedYears.some((year) => year.yearIndex > 0)) {
-      maxYearIndex += 1;
-      sortedYears.push(this.createAutomaticYear(maxYearIndex));
-    }
-
+    let maxYearIndex = sortedYears[sortedYears.length - 1].yearIndex;
     const planApprovals = new Set<string>(student.approved);
     let planApprovedCredits = student.approvedCredits;
     let planMaxLevel = student.maxLevel;
-
     const pendingFailures = new Set<string>(student.pendingFailures);
 
     const remainingList = Array.from(courseMeta.values())
@@ -325,10 +364,14 @@ export class SimulationService {
     let addedYears = 0;
     let totalAdded = 0;
     let hasFutureCourses = false;
+    
+    // (currentYear ya está definido arriba)
 
     for (let yearIdx = 0; yearIdx < sortedYears.length; yearIdx++) {
       const year = sortedYears[yearIdx];
-      if (year.yearIndex === 0) continue;
+      
+      // La regla clave: solo insertar cursos en el PRESENTE o FUTURO
+      if (year.yearIndex < currentYear) continue;
 
       let coursesScheduledInYear = 0;
 
@@ -347,15 +390,9 @@ export class SimulationService {
 
           const enriched = this.enrichCourse(course, courseMeta);
           sanitizedCourses.push(enriched);
-          hasFutureCourses = true;
-
-          if (!scheduledCodes.has(code)) {
-            scheduledCodes.add(code);
-          }
-
-          if (!planApprovals.has(code)) {
-            semesterMetas.set(code, meta);
-          }
+          
+          if (!scheduledCodes.has(code)) scheduledCodes.add(code);
+          if (!planApprovals.has(code)) semesterMetas.set(code, meta);
 
           const effectiveExisting = Number.isFinite(meta.credits) ? Math.max(Number(meta.credits), 0) : 0;
           creditLoad += effectiveExisting;
@@ -363,6 +400,7 @@ export class SimulationService {
 
         for (const meta of remainingList) {
           if (scheduledCodes.has(meta.code)) continue;
+          
           const rawCredits = Number.isFinite(meta.credits) ? Number(meta.credits) : 0;
           const credits = rawCredits;
           const effectiveCredits = credits > 0 ? credits : 0;
@@ -380,7 +418,7 @@ export class SimulationService {
           if (exceedsCap && !allowOversizedCourse) continue;
 
           const newCourse: CourseBoxDto = {
-            id: this.makeId(),
+            id: `AUTO-${meta.code}`, 
             code: meta.code,
             status: 'VACANTE',
             creditos: credits,
@@ -420,10 +458,6 @@ export class SimulationService {
         );
 
         if (unscheduled.length > 0 && addedYears < MAX_EXTRA_YEARS) {
-          if (coursesScheduledInYear === 0 && !relaxed) {
-            break;
-          }
-
           if (coursesScheduledInYear > 0 || relaxed) {
             maxYearIndex += 1;
             sortedYears.push(this.createAutomaticYear(maxYearIndex));
@@ -441,53 +475,10 @@ export class SimulationService {
   private createAutomaticYear(yearIndex: number): YearDto {
     return {
       yearIndex,
-      title: yearIndex === 0 ? 'Semestre Actual' : `Año Simulado ${yearIndex}`,
+      title: `Año Simulado ${yearIndex}`,
       semesters: [
-        {
-          label: 'Primer Semestre',
-          courses: [],
-        },
-        {
-          label: 'Segundo Semestre',
-          courses: [],
-        },
-      ],
-    };
-  }
-
-  private buildCurrentYear(
-    student: StudentState,
-    courseMeta: Map<string, CourseMeta>,
-    fallback: YearDto | null,
-  ): YearDto {
-    if (student.periodSemesters.length > 0) {
-      const latest = student.periodSemesters[student.periodSemesters.length - 1];
-      const enrichedSemester = this.enrichSemester(latest.semester, courseMeta);
-      return {
-        yearIndex: 0,
-        title: 'Semestre Actual',
-        semesters: [enrichedSemester],
-      };
-    }
-
-    if (fallback) {
-      const cloned = this.cloneYear(fallback);
-      cloned.yearIndex = 0;
-      cloned.semesters = cloned.semesters.map((sem) => this.enrichSemester(sem, courseMeta));
-      return cloned;
-    }
-
-    return {
-      yearIndex: 0,
-      title: 'Semestre Actual',
-      semesters: [
-        this.enrichSemester(
-          {
-            label: 'Semestre Actual',
-            courses: [],
-          },
-          courseMeta,
-        ),
+        { label: 'Primer Semestre', courses: [] },
+        { label: 'Segundo Semestre', courses: [] },
       ],
     };
   }
@@ -502,13 +493,13 @@ export class SimulationService {
 
     const sortedYears = [...years].sort((a, b) => a.yearIndex - b.yearIndex);
     const runtime: SimulationRuntime = {
-      approved: new Set(student.approved),
-      approvedCredits: student.approvedCredits,
-      failures: new Map(student.failures),
-      pendingFailures: new Set(student.pendingFailures),
-      maxLevel: student.maxLevel,
-      secondChanceCount: student.secondChanceCount,
-      secondChanceLimitWarned: student.secondChanceCount > 4,
+      approved: new Set(), 
+      approvedCredits: 0,
+      failures: new Map(), 
+      pendingFailures: new Set(),
+      maxLevel: 0,
+      secondChanceCount: 0,
+      secondChanceLimitWarned: false,
       thirdFailureWarned: new Set<string>(),
     };
 
@@ -526,12 +517,6 @@ export class SimulationService {
         const clonedSemester = this.cloneSemester(semester);
         const mergedSemester = this.mergeCarryIntoSemester(clonedSemester, carryForward, courseMeta);
         carryForward = [];
-
-        if (year.yearIndex === 0) {
-          this.consumeActualSemester(mergedSemester, runtime, courseMeta);
-          newYear.semesters.push(mergedSemester);
-          return;
-        }
 
         const semResult = this.processSemester(
           mergedSemester,
@@ -593,7 +578,7 @@ export class SimulationService {
       }
 
       const meta = courseMeta.get(normalizedCode);
-      let status = this.normalizePlanStatus(enrichedCourse.status);
+      let status = this.normalizeRecordStatus(enrichedCourse.status, null);
       const hasException = this.hasExceptionStatus(enrichedCourse.status);
       const reasons: string[] = [];
 
@@ -602,7 +587,9 @@ export class SimulationService {
         status = 'BLOQUEADO';
       }
 
-      if (meta && status !== 'REPROBADO') {
+      const isHistorical = status === 'APROBADO' || status === 'REPROBADO' || status === 'INSCRITO' || status === 'CONVALIDADO';
+
+      if (meta && !isHistorical && status !== 'REPROBADO') {
         if (!hasException) {
           if (runtime.approved.has(normalizedCode)) {
             reasons.push('Curso ya aprobado en períodos anteriores');
@@ -673,23 +660,23 @@ export class SimulationService {
       return acc + (item.meta.credits || 0);
     }, 0);
 
-    for (let i = processed.length - 1; i >= 0 && creditSum > 30; i--) {
-      const item = processed[i];
-      if (item.blocked || !item.meta) continue;
-      if (item.meta.credits <= 0) continue;
-      item.blocked = true;
-      item.status = 'BLOQUEADO';
-      item.reasons.push('Se excede el máximo de 30 créditos');
-      creditSum -= item.meta.credits;
-      this.addWarning(warnings, context, `${item.meta.name} excede el máximo de 30 créditos en el semestre`);
-    }
+    const isHistoricalYear = context.yearIndex < new Date().getFullYear();
 
-    if (creditSum > 0 && creditSum < 12 && !context.isLastMeaningful) {
-      this.addWarning(warnings, context, 'El semestre tiene menos de 12 créditos (mínimo requerido)');
-    }
+    if (!isHistoricalYear) {
+      for (let i = processed.length - 1; i >= 0 && creditSum > 30; i--) {
+        const item = processed[i];
+        if (item.blocked || !item.meta) continue;
+        if (item.meta.credits <= 0) continue;
+        item.blocked = true;
+        item.status = 'BLOQUEADO';
+        item.reasons.push('Se excede el máximo de 30 créditos');
+        creditSum -= item.meta.credits;
+        this.addWarning(warnings, context, `${item.meta.name} excede el máximo de 30 créditos en el semestre`);
+      }
 
-    if (creditSum === 0) {
-      this.addWarning(warnings, context, 'Semestre sin créditos asignados no es válido');
+      if (creditSum > 0 && creditSum < 12 && !context.isLastMeaningful) {
+        this.addWarning(warnings, context, 'El semestre tiene menos de 12 créditos (mínimo requerido)');
+      }
     }
 
     const carryMap = new Map<string, CourseBoxDto>();
@@ -719,7 +706,7 @@ export class SimulationService {
         finalStatus === 'REPROBADO' || finalStatus === 'VACANTE' || finalStatus === 'BLOQUEADO';
       if (shouldCarry && meta && !carryMap.has(code)) {
         const carryCourse: CourseBoxDto = {
-          id: this.makeId(),
+          id: `AUTO-${meta.code}`,
           code: meta.code,
           status: 'VACANTE',
           creditos: meta.credits,
@@ -737,24 +724,85 @@ export class SimulationService {
     return { semester, carryForward };
   }
 
-  private consumeActualSemester(
-    semester: SemesterDto,
-    runtime: SimulationRuntime,
-    courseMeta: Map<string, CourseMeta>,
-  ): void {
-    semester.courses = semester.courses.map((course) => {
-      const enriched = this.enrichCourse(course, courseMeta);
-      const code = this.normalize(enriched.code);
-      if (!code) return enriched;
-      const meta = courseMeta.get(code);
-      const status = this.normalizePlanStatus(enriched.status);
-      if (status === 'APROBADO' || status === 'CONVALIDADO') {
-        this.registerApproval(runtime, code, meta);
-      } else if (status === 'REPROBADO') {
-        this.registerFailure(runtime, code, meta, { yearIndex: 0, semIdx: 0, isLastMeaningful: false }, []);
-      }
-      return enriched;
-    });
+  private normalize(value?: string | null): string {
+    return (value || '').toString().trim().toUpperCase();
+  }
+
+  private parsePrereqs(prereq?: string): string[] {
+    if (!prereq) return [];
+    return prereq.split(',').map((token) => this.normalize(token)).filter(Boolean);
+  }
+
+  private normalizePlanStatus(status?: string | null): CourseStatus {
+    const raw = this.normalize(status);
+    if (raw.includes('APROB')) return 'APROBADO';
+    if (raw.includes('CONVALID')) return 'CONVALIDADO';
+    if (raw.includes('REPROB') || raw.includes('FAIL')) return 'REPROBADO';
+    if (raw.includes('INSCR')) return 'INSCRITO';
+    if (raw.includes('VACANTE')) return 'VACANTE';
+    if (raw.includes('BLOQUE')) return 'BLOQUEADO';
+    if (raw.includes('EXCE')) return 'EXCEPCION';
+    if (!raw) return 'VACANTE';
+    return 'UNKNOWN';
+  }
+
+  private normalizeRecordStatus(status?: string | null, inscriptionType?: string | null): CourseStatus {
+    const normalizedInscription = this.normalize(inscriptionType);
+    if (normalizedInscription.includes('CONVALID') || normalizedInscription.includes('REGULAR')) {
+      return 'CONVALIDADO';
+    }
+    return this.normalizePlanStatus(status);
+  }
+
+  private hasExceptionStatus(status?: string | null): boolean {
+    const raw = this.normalize(status);
+    return raw.includes('EXCEPC');
+  }
+
+  private selectFinalStatus(initial: CourseStatus, blocked: boolean): CourseStatus {
+    if (blocked) return 'BLOQUEADO';
+    if (initial === 'UNKNOWN') return 'VACANTE';
+    return initial;
+  }
+
+  private getSemesterLabel(period?: string): string {
+    const value = (period || '').toString();
+    if (value.length < 6) return `Periodo ${value || 'desconocido'}`;
+    const year = value.substring(0, 4);
+    const suffix = value.substring(4);
+    switch (suffix) {
+      case '10': return `Primer Semestre ${year}`;
+      case '15': return `Curso de Invierno ${year}`;
+      case '20': return `Segundo Semestre ${year}`;
+      case '25': return `Curso de Verano ${year}`;
+      default: return `Periodo ${value}`;
+    }
+  }
+
+  private makeId(): string {
+    return Math.random().toString(36).slice(2, 9);
+  }
+
+  private cloneYear(year: YearDto): YearDto {
+    return {
+      ...year,
+      semesters: year.semesters.map((semester) => this.cloneSemester(semester)),
+    };
+  }
+
+  private cloneSemester(semester: SemesterDto): SemesterDto {
+    return {
+      ...semester,
+      courses: semester.courses.map((course) => this.cloneCourse(course)),
+    };
+  }
+
+  private cloneCourse(course: CourseBoxDto): CourseBoxDto {
+    return { ...course };
+  }
+
+  private addWarning(warnings: WarningDto[], context: SemesterProcessContext, message: string): void {
+    warnings.push({ yearIndex: context.yearIndex, semIdx: context.semIdx, message });
   }
 
   private registerApproval(runtime: SimulationRuntime, code: string, meta?: CourseMeta): void {
@@ -780,24 +828,14 @@ export class SimulationService {
     runtime.pendingFailures.add(code);
 
     if (updated >= 3 && !runtime.thirdFailureWarned.has(code)) {
-      this.addWarning(
-        warnings,
-        context,
-        `${meta?.name || code} alcanza una tercera reprobación (proyección inválida)`,
-      );
+      this.addWarning(warnings, context, `${meta?.name || code} alcanza una tercera reprobación (proyección inválida)`);
       runtime.thirdFailureWarned.add(code);
     }
-
     if (updated === 2) {
       runtime.secondChanceCount += 1;
     }
-
     if (runtime.secondChanceCount > 4 && !runtime.secondChanceLimitWarned) {
-      this.addWarning(
-        warnings,
-        context,
-        'Más de cuatro cursos alcanzan segunda reprobación (proyección inválida)',
-      );
+      this.addWarning(warnings, context, 'Más de cuatro cursos alcanzan segunda reprobación (proyección inválida)');
       runtime.secondChanceLimitWarned = true;
     }
   }
@@ -870,94 +908,5 @@ export class SimulationService {
       if (meta.credits > 0) cloned.creditos = meta.credits;
     }
     return cloned;
-  }
-
-  private cloneYear(year: YearDto): YearDto {
-    return {
-      ...year,
-      semesters: year.semesters.map((semester) => this.cloneSemester(semester)),
-    };
-  }
-
-  private cloneSemester(semester: SemesterDto): SemesterDto {
-    return {
-      ...semester,
-      courses: semester.courses.map((course) => this.cloneCourse(course)),
-    };
-  }
-
-  private cloneCourse(course: CourseBoxDto): CourseBoxDto {
-    return { ...course };
-  }
-
-  private addWarning(warnings: WarningDto[], context: SemesterProcessContext, message: string): void {
-    warnings.push({ yearIndex: context.yearIndex, semIdx: context.semIdx, message });
-  }
-
-  private normalize(value?: string | null): string {
-    return (value || '').toString().trim().toUpperCase();
-  }
-
-  private parsePrereqs(prereq?: string): string[] {
-    if (!prereq) return [];
-    return prereq
-      .split(',')
-      .map((token) => this.normalize(token))
-      .filter(Boolean);
-  }
-
-  private normalizePlanStatus(status?: string | null): CourseStatus {
-    const raw = this.normalize(status);
-    if (raw.includes('APROB')) return 'APROBADO';
-    if (raw.includes('CONVALID')) return 'CONVALIDADO';
-    if (raw.includes('REPROB') || raw.includes('FAIL')) return 'REPROBADO';
-    if (raw.includes('INSCR')) return 'INSCRITO';
-    if (raw.includes('VACANTE')) return 'VACANTE';
-    if (raw.includes('BLOQUE')) return 'BLOQUEADO';
-    if (raw.includes('EXCE')) return 'EXCEPCION';
-    if (!raw) return 'VACANTE';
-    return 'UNKNOWN';
-  }
-
-  private normalizeRecordStatus(status?: string | null, inscriptionType?: string | null): CourseStatus {
-    const normalizedInscription = this.normalize(inscriptionType);
-    if (normalizedInscription.includes('CONVALID') || normalizedInscription.includes('REGULAR')) {
-      return 'CONVALIDADO';
-    }
-    return this.normalizePlanStatus(status);
-  }
-
-  private hasExceptionStatus(status?: string | null): boolean {
-    const raw = this.normalize(status);
-    return raw.includes('EXCEPC');
-  }
-
-  private selectFinalStatus(initial: CourseStatus, blocked: boolean): CourseStatus {
-    if (blocked) return 'BLOQUEADO';
-    if (initial === 'UNKNOWN') return 'VACANTE';
-    return initial;
-  }
-
-  private getSemesterLabel(period?: string): string {
-    const value = (period || '').toString();
-    if (value.length < 6) return `Periodo ${value || 'desconocido'}`;
-    const year = value.substring(0, 4);
-    const suffix = value.substring(4);
-    switch (suffix) {
-      case '10':
-        return `Primer Semestre ${year}`;
-      case '15':
-        return `Curso de Invierno ${year}`;
-      case '20':
-        return `Segundo Semestre ${year}`;
-      case '25':
-        return `Curso de Verano ${year}`;
-      default:
-        return `Periodo ${value}`;
-    }
-  }
-
-  private makeId(): string {
-    return Math.random().toString(36).slice(2, 9);
   }
 }

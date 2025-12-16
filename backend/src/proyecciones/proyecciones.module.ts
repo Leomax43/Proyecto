@@ -4,9 +4,11 @@ import { ProyeccionesService } from './proyecciones.service';
 import { SimulationService } from './simulation.service';
 import { HttpModule } from '@nestjs/axios';
 import { UcnModule } from '../ucn/ucn.module';
+import { TypeOrmModule } from '@nestjs/typeorm'; 
+import { Projection } from './entities/projection.entity'; 
 
 @Module({
-  imports: [HttpModule, UcnModule],
+  imports: [HttpModule, UcnModule,TypeOrmModule.forFeature([Projection])],
   controllers: [ProyeccionesController],
   providers: [ProyeccionesService, SimulationService],
   exports: [ProyeccionesService],
