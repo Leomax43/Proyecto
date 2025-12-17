@@ -48,6 +48,7 @@ type CourseMeta = {
   creditRequirement: number;
   minLevelRequirement: number;
   isTitulo: boolean;
+  dependentCount: number;
 };
 
 type StudentState = {
@@ -120,6 +121,16 @@ export class SimulationService {
       sortedYears.push(this.createAutomaticYear(lastYearIndex));
     }
 
+    const pendingFailures = new Set(initialState.pendingFailures);
+    const comparator = this.createCourseComparator(prefs, pendingFailures);
+
+    const semesterLimit = prefs.semesterLimit ?? null;
+    if (semesterLimit !== null) {
+      this.enforceSemesterLimit(sortedYears, semesterLimit);
+    }
+
+    let futureSemestersCount = this.countSemesters(sortedYears);
+
     // --- ESTADO DE LA SIMULACIÓN ---
     const simApproved = new Set(initialState.approved);
     let simCredits = initialState.approvedCredits;
@@ -144,8 +155,6 @@ export class SimulationService {
     for (let i = 0; i < sortedYears.length; i++) {
       const year = sortedYears[i];
       if (year.yearIndex < currentYear) continue;
-
-      let coursesAddedThisYear = 0;
 
       for (const semester of year.semesters) {
         const keptCourses: CourseBoxDto[] = [];
@@ -173,26 +182,19 @@ export class SimulationService {
         });
 
         // 2. BUSCAR CANDIDATOS (Usando simApproved que SOLO tiene lo histórico/anterior)
-        const candidates = Array.from(courseMeta.values()).filter(meta => {
-          if (globalScheduled.has(meta.code)) return false;
-          if (semesterCodes.has(meta.code)) return false; 
-          
-          const prereqsMet = meta.prereqs.every(req => simApproved.has(req));
-          if (!prereqsMet) return false;
+        const candidates = Array.from(courseMeta.values())
+          .filter(meta => {
+            if (globalScheduled.has(meta.code)) return false;
+            if (semesterCodes.has(meta.code)) return false;
 
-          if (meta.creditRequirement > simCredits) return false;
+            const prereqsMet = meta.prereqs.every(req => simApproved.has(req));
+            if (!prereqsMet) return false;
 
-          return true;
-        });
+            if (meta.creditRequirement > simCredits) return false;
 
-        // 3. ORDENAR
-        candidates.sort((a, b) => {
-          const levelDiff = a.level - b.level;
-          if (levelDiff !== 0) return levelDiff; 
-          if (a.isTitulo && !b.isTitulo) return 1;
-          if (!a.isTitulo && b.isTitulo) return -1;
-          return a.code.localeCompare(b.code);
-        });
+            return true;
+          })
+          .sort(comparator);
 
         // 4. LLENAR EL SEMESTRE
         for (const meta of candidates) {
@@ -212,7 +214,6 @@ export class SimulationService {
           globalScheduled.add(meta.code);
           semesterCodes.add(meta.code);
           currentLoad += meta.credits;
-          coursesAddedThisYear++;
         }
 
         semester.courses = keptCourses;
@@ -237,8 +238,26 @@ export class SimulationService {
         const remaining = Array.from(courseMeta.values()).filter(m => !globalScheduled.has(m.code));
         if (remaining.length > 0) {
           const nextYearIdx = year.yearIndex + 1;
-          if (nextYearIdx < currentYear + 8) { 
-             sortedYears.push(this.createAutomaticYear(nextYearIdx));
+          if (nextYearIdx < currentYear + 8) {
+            if (semesterLimit !== null) {
+              const remainingAllowance = semesterLimit - futureSemestersCount;
+              if (remainingAllowance <= 0) {
+                continue;
+              }
+              const newYear = this.createAutomaticYear(nextYearIdx);
+              if (remainingAllowance < newYear.semesters.length) {
+                newYear.semesters = newYear.semesters.slice(0, remainingAllowance);
+              }
+              if (newYear.semesters.length === 0) {
+                continue;
+              }
+              sortedYears.push(newYear);
+              futureSemestersCount += newYear.semesters.length;
+            } else {
+              const newYear = this.createAutomaticYear(nextYearIdx);
+              sortedYears.push(newYear);
+              futureSemestersCount += this.countSemesters([newYear]);
+            }
           }
         }
       }
@@ -296,7 +315,23 @@ export class SimulationService {
         prereqs: this.parsePrereqs(curso.prereq),
         creditRequirement: creditReq,
         minLevelRequirement: levelReq,
-        isTitulo: credits >= 20 || isCapstone, 
+        isTitulo: credits >= 20 || isCapstone,
+        dependentCount: 0,
+      });
+    });
+
+    map.forEach((meta) => {
+      // Ignore prerequisites that are not part of the course catalog (e.g., ayudantías externas).
+      meta.prereqs = meta.prereqs.filter((pr) => validCodes.has(pr));
+      meta.dependentCount = 0;
+    });
+
+    map.forEach((meta) => {
+      meta.prereqs.forEach((pr) => {
+        const prereqMeta = map.get(pr);
+        if (prereqMeta) {
+          prereqMeta.dependentCount += 1;
+        }
       });
     });
 
@@ -386,8 +421,16 @@ export class SimulationService {
       priority: dto?.priority || 'BALANCED',
       unlockFocus: !!dto?.unlockFocus,
       levelDispersion: dto?.levelDispersion ?? 1,
-      semesterLimit: dto?.semesterLimit ?? 12
+      semesterLimit: this.normalizeSemesterLimit(dto?.semesterLimit)
     };
+  }
+
+  private normalizeSemesterLimit(raw?: number | null): number | null {
+    if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+      return null;
+    }
+    const normalizedYears = Math.max(1, Math.floor(raw));
+    return normalizedYears * 2;
   }
 
   private normalize(value?: string | null): string {
@@ -444,4 +487,74 @@ export class SimulationService {
   }
 
   private cloneYear(y: YearDto): YearDto { return JSON.parse(JSON.stringify(y)); }
+
+  private createCourseComparator(
+    prefs: SimulationPreferences,
+    pendingFailures: Set<string>,
+  ): (a: CourseMeta, b: CourseMeta) => number {
+    return (a, b) => {
+      const priorityScore = (meta: CourseMeta): number => {
+        const isPending = pendingFailures.has(meta.code);
+        switch (prefs.priority) {
+          case 'PENDING_FIRST':
+            return isPending ? 0 : 1;
+          case 'NEW_FIRST':
+            return isPending ? 1 : 0;
+          default:
+            return 0;
+        }
+      };
+
+      const priorityDiff = priorityScore(a) - priorityScore(b);
+      if (priorityDiff !== 0) return priorityDiff;
+
+      const levelDiff = a.level - b.level;
+      if (levelDiff !== 0) return levelDiff;
+
+      if (prefs.unlockFocus) {
+        const dependentsDiff = b.dependentCount - a.dependentCount;
+        if (dependentsDiff !== 0) return dependentsDiff;
+      }
+
+      const creditsDiff = (b.credits || 0) - (a.credits || 0);
+      if (creditsDiff !== 0) return creditsDiff;
+
+      if (a.isTitulo !== b.isTitulo) {
+        return a.isTitulo ? 1 : -1;
+      }
+
+      return a.code.localeCompare(b.code);
+    };
+  }
+
+  private enforceSemesterLimit(years: YearDto[], limit: number): void {
+    if (!Number.isFinite(limit) || limit <= 0) return;
+
+    let allowance = Math.floor(limit);
+
+    years.forEach((year) => {
+      if (allowance <= 0) {
+        year.semesters = [];
+        return;
+      }
+
+      if (year.semesters.length <= allowance) {
+        allowance -= year.semesters.length;
+        return;
+      }
+
+      year.semesters = year.semesters.slice(0, allowance);
+      allowance = 0;
+    });
+
+    for (let idx = years.length - 1; idx >= 0; idx--) {
+      if (years[idx].semesters.length === 0) {
+        years.splice(idx, 1);
+      }
+    }
+  }
+
+  private countSemesters(years: YearDto[]): number {
+    return years.reduce((total, year) => total + (Array.isArray(year.semesters) ? year.semesters.length : 0), 0);
+  }
 }

@@ -583,7 +583,7 @@ const Proyecciones: React.FC = () => {
                   />
                 </label>
                 <label className="auto-config-field">
-                  <span className="auto-config-label">Límite de semestres</span>
+                  <span className="auto-config-label">Límite de años</span>
                   <input
                     type="number"
                     min={1}
