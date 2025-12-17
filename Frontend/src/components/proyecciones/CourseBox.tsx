@@ -13,11 +13,13 @@ const CourseBox: React.FC<Props> = ({ box, onClick }) => {
   const clickKey = `${box.id}||${box.code || ''}`;
   const ns = normalizeStatus(box.status, undefined);
   const isBlocked = (box.status || '').toString().toUpperCase() === 'BLOQUEADO';
+  if (isBlocked) {
+    return null;
+  }
+
   const handleClick = () => {
-    if (isBlocked) return;
     onClick(clickKey);
   };
-  const blockedClass = isBlocked ? ' status-bloqueado' : '';
   return (
     <CourseCard
       code={box.code || '—'}
@@ -25,7 +27,7 @@ const CourseBox: React.FC<Props> = ({ box, onClick }) => {
       creditos={box.creditos}
       status={box.status}
       onClick={handleClick}
-      className={`avance-course ${ns.spanishClass} ${ns.englishClass}${blockedClass}`}
+      className={`avance-course ${ns.spanishClass} ${ns.englishClass}`}
     />
   );
 };
