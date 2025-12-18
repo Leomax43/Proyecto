@@ -92,6 +92,8 @@ const Proyecciones: React.FC = () => {
   // Estado para datos completos del usuario (necesario para guardar)
   const [userCareerData, setUserCareerData] = useState<{ rut: string; codCarrera: string; catalogo: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{show: boolean, msg: string}>({show: false, msg: ''});
+  const [showSaveToast, setShowSaveToast] = useState(false);
 
   const [autoPreferences, setAutoPreferences] = useState<SimulationPreferences>(() => {
     try {
@@ -216,6 +218,8 @@ const Proyecciones: React.FC = () => {
       console.error("Error guardando proyección:", e);
     } finally {
       setIsSaving(false);
+      setSaveStatus({show: true, msg: 'Planificación actualizada'});
+      setTimeout(() => setSaveStatus({show: false, msg: ''}), 2000);
     }
   };
 
@@ -503,6 +507,10 @@ const Proyecciones: React.FC = () => {
       <Sidebar />
       <main className="proyecciones-main">
         <div className="proyecciones-container">
+        {/* Toast de guardado con animación CSS */}
+        <div className={`toast-notification ${saveStatus.show ? 'visible' : ''}`}>
+          {saveStatus.msg}
+        </div>
           <header className="proyecciones-header">
             <div>
               <h1>Proyección {isSaving && <span style={{fontSize: '0.6em', color: '#888'}}>(Guardando...)</span>}</h1>
@@ -628,40 +636,41 @@ const Proyecciones: React.FC = () => {
                     </div>
                   </div>
                   {isSimulating && (
-                    <div className="simulation-indicator" role="status" aria-live="polite">
-                      <div className="simulation-indicator-bubble">
-                        <span className="simulation-spinner" aria-hidden="true" />
-                        Calculando proyección...
+                    <div className="simulation-overlay-full">
+                      <div className="spinner-container">
+                        <div className="spinner-loader"></div>
+                        <p style={{ color: '#1e5972', fontWeight: 'bold' }}>
+                          Analizando prerrequisitos y calculando proyección...
+                        </p>
                       </div>
                     </div>
                   )}
+
                   {simulationError && (
                     <div className="simulation-error">{simulationError}</div>
                   )}
                   {simulationWarnings.length > 0 && (
-                    <div className="projection-warnings">
-                      <div className="projection-warnings-header">
-                        <div className="projection-warnings-title">
-                          Restricciones detectadas ({simulationWarnings.length})
+                    <div className="modern-warning-box">
+                      <div className="warning-box-header" onClick={() => setWarningsCollapsed(!warningsCollapsed)}>
+                        <div className="warning-title">
+                          <span className="icon">⚠️</span>
+                          Hay {simulationWarnings.length} advertencias académicas
                         </div>
-                        <button
-                          className="btn"
-                          onClick={() => setWarningsCollapsed((prev) => !prev)}
-                        >
-                          {warningsCollapsed ? 'Mostrar' : 'Minimizar'}
+                        <button className="btn-toggle-warning">
+                          {warningsCollapsed ? 'Ver detalles' : 'Ocultar'}
                         </button>
                       </div>
                       {!warningsCollapsed && (
-                        <ul>
+                        <ul className="warning-list-detailed">
                           {simulationWarnings.map((warning, idx) => (
-                            <li key={`${warning.yearIndex}-${warning.semIdx}-${idx}`}>
-                              <strong>Año {warning.yearIndex}, Semestre {warning.semIdx + 1}:</strong> {warning.message}
+                            <li key={idx}>
+                              <span className="badge">Año {warning.yearIndex}</span> {warning.message}
                             </li>
                           ))}
                         </ul>
                       )}
                     </div>
-                  )}
+                  )}  
                   <div className="years-list">
                     {displayYears.map((y) => (
                       <YearBlock

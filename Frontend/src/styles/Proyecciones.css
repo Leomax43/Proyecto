@@ -179,3 +179,152 @@
   .semester-row { grid-template-columns: 1fr; }
   .semester-actions { grid-column: 1 / -1; }
 }
+
+.simulation-overlay-full {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spinner-loader {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #1e5972;
+  border-radius: 50%;
+  animation: spin-anim 1s linear infinite;
+  margin: 0 auto 15px;
+}
+
+@keyframes spin-anim { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.modern-warning-box {
+  background: #fffaf0;
+  border: 1px solid #feebc8;
+  border-left: 6px solid #ed8936;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.warning-box-header {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.warning-title { color: #dd6b20; font-weight: bold; display: flex; gap: 8px; }
+
+.warning-list-detailed {
+  padding: 0 16px 12px;
+  margin: 0;
+  list-style: none;
+}
+
+.warning-list-detailed li {
+  padding: 6px 0;
+  border-top: 1px solid #feebc8;
+  font-size: 0.9rem;
+  color: #7b341e;
+}
+
+.warning-list-detailed .badge {
+  background: #ed8936;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.modern-warning-box {
+  background: #fff5f5;
+  border: 1px solid #feb2b2;
+  border-left: 6px solid #f56565;
+  border-radius: 12px;
+  margin: 20px 0;
+  padding: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.warning-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #c53030;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.warning-list-detailed li {
+  color: #742a2a;
+  padding: 8px 0;
+  border-top: 1px solid #fed7d7;
+  list-style: none;
+  font-size: 0.95rem;
+}
+
+.status-proyectado {
+  border-left: 6px solid #3182ce !important; /* Azul para indicar "por tomar" */
+  background-color: #ebf8ff !important;
+}
+
+.toast-notification {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #2d3748;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  transition: transform 0.3s ease-out;
+  z-index: 1000;
+}
+
+.toast-notification.visible {
+  transform: translateX(-50%) translateY(0);
+}
+
+.save-toast {
+  position: fixed;
+  top: 20px;
+  right: 50%;
+  transform: translateX(50%) translateY(-100px);
+  background: #2d9d5b;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  z-index: 1000;
+  transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  font-weight: 600;
+}
+
+.save-toast.show {
+  transform: translateX(50%) translateY(20px);
+}
+
+/* Mejora de botones */
+.btn {
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}

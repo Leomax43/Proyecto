@@ -23,11 +23,12 @@ export const normalize = (s?: string) => {
 };
 // -------------------------------
 
+
 export const statusCycle = (s?: string) => {
-  const order = ['VACANTE', 'APROBADO', 'REPROBADO'];
+  // En proyecciones, un ramo solo puede estar 'VACANTE' (no lo tomo) 
+  // o 'PROYECTADO' (lo tomo este semestre).
   const cur = ((s || '').toUpperCase() || 'VACANTE');
-  const idx = order.indexOf(cur);
-  return order[(idx + 1) % order.length];
+  return cur === 'VACANTE' ? 'PROYECTADO' : 'VACANTE';
 };
 
 export const parsePrereqs = (p?: string) => {

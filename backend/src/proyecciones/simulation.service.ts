@@ -118,6 +118,37 @@ export class SimulationService {
 		const studentState = this.buildStudentState(adjustedAvance, courseMeta);
 		this.applyOverridesToStudentState(studentState, currentOverrides, courseMeta);
 
+		const manualWarnings: WarningDto[] = [];
+    	const simApproved = new Set(studentState.approved);
+
+    	proyeccion.years.forEach((year) => {
+      		year.semesters.forEach((sem, semIdx) => {
+       	 	sem.courses.forEach((course) => {
+          		if (!course.code) return;
+          		const code = this.normalize(course.code);
+          		const meta = courseMeta.get(code);
+          		if (meta) {
+            		const isAlreadyApproved = studentState.approved.has(code);
+            		// Si el ramo no está aprobado, verificamos sus requisitos
+            		if (!isAlreadyApproved && meta.prereqs.length > 0) {
+             			const missing = meta.prereqs.filter(p => !simApproved.has(p));
+              			if (missing.length > 0) {
+                			manualWarnings.push({
+                  				yearIndex: year.yearIndex,
+                  				semIdx: semIdx,
+                  				message: `Requisitos faltantes para "${meta.name}": ${missing.map(m => courseMeta.get(m)?.name || m).join(', ')}.`
+                			});
+              			}
+            		}
+            		// Actualizamos la bolsa de aprobados para el siguiente semestre de la simulación manual
+            		if (isAlreadyApproved || course.status === 'APROBADO') {
+              			simApproved.add(code);
+            		}
+          		}
+        	});
+      	});
+    	});
+		
 		const baseYears = this.prepareInitialYears(proyeccion, studentState, courseMeta, currentOverrides);
 		const timelineYears = this.prepareTimeline(proyeccion, courseMeta);
 		const mergedYears = this.mergeTimelineYears(baseYears, timelineYears);
