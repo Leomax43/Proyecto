@@ -98,7 +98,7 @@ export class SimulationPreferencesDto {
 
   @IsOptional()
   @Min(1)
-  @Max(12)
+  @Max(2)
   @IsNumber()
   semesterLimit?: number;
 }

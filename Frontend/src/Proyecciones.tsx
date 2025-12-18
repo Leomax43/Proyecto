@@ -595,9 +595,9 @@ const Proyecciones: React.FC = () => {
                   <input
                     type="number"
                     min={1}
-                    max={12}
+                    max={2}
                     value={autoPreferences.semesterLimit ?? ''}
-                    onChange={(event) => updatePreference('semesterLimit', parseNumberOrNull(event.target.value, 1, 12))}
+                    onChange={(event) => updatePreference('semesterLimit', parseNumberOrNull(event.target.value, 1, 2))}
                   />
                 </label>
                 <label className="auto-config-checkbox">
