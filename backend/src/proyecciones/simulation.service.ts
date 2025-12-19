@@ -9,6 +9,11 @@ import {
 	YearDto,
 } from './dto/simulate-projection.dto';
 
+interface ApiCursoEquivalenceDetail {
+	codigo?: string;
+	nombre?: string;
+}
+
 interface ApiCurso {
 	codigo: string;
 	asignatura: string;
@@ -23,6 +28,8 @@ interface ApiCurso {
 	nivelMinimo?: number;
 	nivel_minimo?: number;
 	nivelReq?: number;
+	equivalencias?: string[] | null;
+	equivalenciasDetalle?: ApiCursoEquivalenceDetail[] | null;
 }
 
 interface ApiAvance {
@@ -113,10 +120,13 @@ export class SimulationService {
 		rawPreferences?: SimulationPreferencesDto,
 	): SimulationResultDto {
 		const courseMeta = this.buildCourseMeta(allCourses || []);
-		const currentOverrides = this.extractCurrentSemesterOverrides(proyeccion);
-		const adjustedAvance = this.applyOverridesToAvance(allAvance || [], currentOverrides);
-		const studentState = this.buildStudentState(adjustedAvance, courseMeta);
-		this.applyOverridesToStudentState(studentState, currentOverrides, courseMeta);
+		const aliasMap = this.buildCourseAliasMap(allCourses || []);
+		const rawOverrides = this.extractCurrentSemesterOverrides(proyeccion);
+		const currentOverrides = this.normalizeOverrideCodes(rawOverrides, aliasMap, courseMeta);
+		const canonicalAvance = this.remapAvanceCourses(allAvance || [], aliasMap, courseMeta);
+		const adjustedAvance = this.applyOverridesToAvance(canonicalAvance, currentOverrides);
+		const studentState = this.buildStudentState(adjustedAvance, courseMeta, aliasMap);
+		this.applyOverridesToStudentState(studentState, currentOverrides, courseMeta, aliasMap);
 
 		const baseYears = this.prepareInitialYears(proyeccion, studentState, courseMeta, currentOverrides);
 		const timelineYears = this.prepareTimeline(proyeccion, courseMeta);
@@ -280,6 +290,75 @@ export class SimulationService {
 		return map;
 	}
 
+	private buildCourseAliasMap(allCourses: ApiCurso[]): Map<string, string> {
+		const map = new Map<string, string>();
+		allCourses.forEach((curso) => {
+			const canonical = this.normalize(curso?.codigo);
+			if (!canonical) return;
+			const register = (rawCode?: string | null) => {
+				const alias = this.normalize(rawCode);
+				if (!alias || alias === canonical) return;
+				if (!map.has(alias)) {
+					map.set(alias, canonical);
+				}
+			};
+			(curso.equivalencias ?? []).forEach((alias) => register(alias));
+			(curso.equivalenciasDetalle ?? []).forEach((detail) => register(detail?.codigo));
+		});
+		return map;
+	}
+
+	private normalizeOverrideCodes(
+		overrides: Map<string, CourseBoxDto>,
+		aliasMap: Map<string, string>,
+		courseMeta: Map<string, CourseMeta>,
+	): Map<string, CourseBoxDto> {
+		if (overrides.size === 0) {
+			return overrides;
+		}
+		const normalized = new Map<string, CourseBoxDto>();
+		overrides.forEach((override, rawCode) => {
+			const canonical = this.resolveCanonicalCode(rawCode, aliasMap);
+			if (!canonical) return;
+			const meta = courseMeta.get(canonical);
+			const merged: CourseBoxDto = {
+				...override,
+				code: canonical,
+				name: override.name ?? meta?.name,
+				creditos: override.creditos ?? meta?.credits,
+			};
+			normalized.set(canonical, merged);
+		});
+		return normalized.size ? normalized : overrides;
+	}
+
+	private remapAvanceCourses(
+		avance: ApiAvance[],
+		aliasMap: Map<string, string>,
+		courseMeta: Map<string, CourseMeta>,
+	): ApiAvance[] {
+		if (!Array.isArray(avance)) {
+			return [];
+		}
+		return avance.map((record) => {
+			const rawCode = this.normalize(record.course || (record as any).codigo);
+			if (!rawCode) {
+				return record;
+			}
+			const canonical = this.resolveCanonicalCode(rawCode, aliasMap);
+			const meta = courseMeta.get(rawCode) ?? courseMeta.get(canonical);
+			if (!meta) {
+				return record;
+			}
+			const hasCredits = Number.isFinite(record.creditos);
+			return {
+				...record,
+				asignatura: record.asignatura ?? meta.name,
+				creditos: hasCredits ? Number(record.creditos) : meta.credits ?? record.creditos,
+			};
+		});
+	}
+
 	private extractCurrentSemesterOverrides(proyeccion: ProyeccionDto): Map<string, CourseBoxDto> {
 		const overrides = new Map<string, CourseBoxDto>();
 		if (!proyeccion || !Array.isArray(proyeccion.years)) return overrides;
@@ -371,6 +450,7 @@ export class SimulationService {
 		student: StudentState,
 		overrides: Map<string, CourseBoxDto>,
 		courseMeta: Map<string, CourseMeta>,
+		aliasMap: Map<string, string>,
 	): void {
 		if (overrides.size === 0) return;
 
@@ -392,17 +472,42 @@ export class SimulationService {
 			}
 		});
 
-		let newApprovedCredits = 0;
-		let newMaxLevel = 0;
+		this.recalculateStudentAggregates(student, courseMeta, aliasMap, originalMaxLevel);
+	}
+
+	private recalculateStudentAggregates(
+		student: StudentState,
+		courseMeta: Map<string, CourseMeta>,
+		aliasMap: Map<string, string>,
+		minMaxLevel?: number,
+	): void {
+		const counted = new Set<string>();
+		let approvedCredits = 0;
+		let maxLevel = 0;
+
 		student.approved.forEach((code) => {
-			const meta = courseMeta.get(code);
-			if (!meta) return;
-			newApprovedCredits += meta.credits;
-			if (meta.level > newMaxLevel) newMaxLevel = meta.level;
+			const canonical = this.resolveCanonicalCode(code, aliasMap);
+			const key = canonical || code;
+			if (counted.has(key)) {
+				return;
+			}
+			counted.add(key);
+			const meta = courseMeta.get(code) ?? courseMeta.get(canonical);
+			if (!meta) {
+				return;
+			}
+			approvedCredits += meta.credits;
+			if (meta.level > maxLevel) {
+				maxLevel = meta.level;
+			}
 		});
 
-		student.approvedCredits = newApprovedCredits;
-		student.maxLevel = Math.max(newMaxLevel, originalMaxLevel);
+		student.approvedCredits = approvedCredits;
+		if (typeof minMaxLevel === 'number') {
+			student.maxLevel = Math.max(maxLevel, minMaxLevel);
+		} else {
+			student.maxLevel = maxLevel;
+		}
 
 		const newPendingFailures = new Set<string>();
 		student.failures.forEach((count, code) => {
@@ -414,27 +519,34 @@ export class SimulationService {
 		student.secondChanceCount = Array.from(student.failures.values()).filter((count) => count >= 2).length;
 	}
 
-	private buildStudentState(avance: ApiAvance[], courseMeta: Map<string, CourseMeta>): StudentState {
+	private buildStudentState(
+		avance: ApiAvance[],
+		courseMeta: Map<string, CourseMeta>,
+		aliasMap: Map<string, string>,
+	): StudentState {
 		const approved = new Set<string>();
 		const failures = new Map<string, number>();
 		const pendingFailures = new Set<string>();
 		const periodMap = new Map<string, CourseBoxDto[]>();
+		const creditedCourses = new Set<string>();
 		let approvedCredits = 0;
 		let maxLevel = 0;
 
 		avance.forEach((record) => {
-			const code = this.normalize(record.course || (record as any).codigo);
-			if (!code) return;
-			const meta = courseMeta.get(code);
+			const rawCode = record.course || (record as any).codigo;
+			const normalizedCode = this.normalize(rawCode);
+			if (!normalizedCode) return;
+			const canonicalCode = this.resolveCanonicalCode(normalizedCode, aliasMap);
+			const meta = courseMeta.get(normalizedCode) ?? courseMeta.get(canonicalCode);
 			const status = this.normalizeRecordStatus(record.status, record.inscriptionType);
 			const creditsFromMeta = meta?.credits ?? 0;
 			const credits = Number.isFinite(record.creditos) ? Number(record.creditos) : creditsFromMeta;
 			const box: CourseBoxDto = {
 				id: this.makeId(),
-				code,
+				code: normalizedCode,
 				status,
 				creditos: credits,
-				name: meta?.name || record.asignatura,
+				name: record.asignatura || meta?.name,
 			};
 
 			const period = (record.period || 'SIN_PERIODO').toString();
@@ -442,16 +554,29 @@ export class SimulationService {
 			periodMap.get(period)!.push({ ...box });
 
 			if (status === 'APROBADO' || status === 'CONVALIDADO') {
-				if (!approved.has(code)) {
-					approved.add(code);
-					approvedCredits += creditsFromMeta || credits || 0;
-					pendingFailures.delete(code);
-					if (meta && meta.level > maxLevel) maxLevel = meta.level;
+				if (!approved.has(normalizedCode)) {
+					approved.add(normalizedCode);
 				}
+				if (canonicalCode && !approved.has(canonicalCode)) {
+					approved.add(canonicalCode);
+				}
+				const creditKey = canonicalCode || normalizedCode;
+				if (!creditedCourses.has(creditKey)) {
+					creditedCourses.add(creditKey);
+					approvedCredits += creditsFromMeta || credits || 0;
+				}
+				const levelSource = courseMeta.get(canonicalCode) ?? meta;
+				if (levelSource && levelSource.level > maxLevel) {
+					maxLevel = levelSource.level;
+				}
+				const failureKey = canonicalCode || normalizedCode;
+				failures.delete(failureKey);
+				pendingFailures.delete(failureKey);
 			} else if (status === 'REPROBADO') {
-				const current = failures.get(code) ?? 0;
-				failures.set(code, current + 1);
-				pendingFailures.add(code);
+				const failureKey = canonicalCode || normalizedCode;
+				const current = failures.get(failureKey) ?? 0;
+				failures.set(failureKey, current + 1);
+				pendingFailures.add(failureKey);
 			}
 		});
 
@@ -1369,6 +1494,12 @@ export class SimulationService {
 	private normalize(value?: string | null): string {
 		if (!value) return '';
 		return value.toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+	}
+
+	private resolveCanonicalCode(code?: string | null, aliasMap?: Map<string, string>): string {
+		const normalized = this.normalize(code);
+		if (!normalized) return '';
+		return aliasMap?.get(normalized) ?? normalized;
 	}
 
 	private parsePrereqs(prereq?: string): string[] {

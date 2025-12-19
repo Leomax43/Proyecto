@@ -1,0 +1,452 @@
+[
+    {
+        "nrc": "21940",
+        "period": "202320",
+        "student": "222222222",
+        "course": "ECIN-00416",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "21941",
+        "period": "202320",
+        "student": "222222222",
+        "course": "ECIN-00418",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "21969",
+        "period": "202320",
+        "student": "222222222",
+        "course": "ECIN-00419",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "22137",
+        "period": "202320",
+        "student": "222222222",
+        "course": "SSED-00302",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "22552",
+        "period": "202320",
+        "student": "222222222",
+        "course": "DCTE-00005",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "11759",
+        "period": "202310",
+        "student": "222222222",
+        "course": "ECIN-00318",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "12869",
+        "period": "202310",
+        "student": "222222222",
+        "course": "ECIN-00517",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "20627",
+        "period": "202220",
+        "student": "222222222",
+        "course": "SSED-00302",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "22429",
+        "period": "202220",
+        "student": "222222222",
+        "course": "ECIN-00318",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "11324",
+        "period": "202210",
+        "student": "222222222",
+        "course": "DCTE-00004",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "12332",
+        "period": "202210",
+        "student": "222222222",
+        "course": "ECIN-00315",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "13478",
+        "period": "202210",
+        "student": "222222222",
+        "course": "ECIN-00216",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "21220",
+        "period": "202120",
+        "student": "222222222",
+        "course": "SSED-00200",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "22464",
+        "period": "202120",
+        "student": "222222222",
+        "course": "ECIN-00216",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "23126",
+        "period": "202120",
+        "student": "222222222",
+        "course": "ECIN-00415",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "23133",
+        "period": "202120",
+        "student": "222222222",
+        "course": "ECIN-00315",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "23136",
+        "period": "202120",
+        "student": "222222222",
+        "course": "ECIN-00417",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "23137",
+        "period": "202120",
+        "student": "222222222",
+        "course": "ECIN-00319",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "12655",
+        "period": "202110",
+        "student": "222222222",
+        "course": "DCCB-00241",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "12744",
+        "period": "202110",
+        "student": "222222222",
+        "course": "ECIN-00316",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "12745",
+        "period": "202110",
+        "student": "222222222",
+        "course": "ECIN-00317",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "12801",
+        "period": "202110",
+        "student": "222222222",
+        "course": "DCCB-00340",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "20968",
+        "period": "202020",
+        "student": "222222222",
+        "course": "DCTE-00002",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "23067",
+        "period": "202020",
+        "student": "222222222",
+        "course": "DCCB-00242",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "23070",
+        "period": "202020",
+        "student": "222222222",
+        "course": "DCCB-00241",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "23072",
+        "period": "202020",
+        "student": "222222222",
+        "course": "DCCB-00240",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "23204",
+        "period": "202020",
+        "student": "222222222",
+        "course": "ECIN-00115",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "23209",
+        "period": "202020",
+        "student": "222222222",
+        "course": "ECIN-00217",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "23210",
+        "period": "202020",
+        "student": "222222222",
+        "course": "ECIN-00216",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "10903",
+        "period": "202010",
+        "student": "222222222",
+        "course": "SSED-00100",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "11157",
+        "period": "202010",
+        "student": "222222222",
+        "course": "SSED-00102",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "12737",
+        "period": "202010",
+        "student": "222222222",
+        "course": "DCTE-00000",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "13357",
+        "period": "202010",
+        "student": "222222222",
+        "course": "DCCB-00141",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "13358",
+        "period": "202010",
+        "student": "222222222",
+        "course": "DCCB-00142",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "13359",
+        "period": "202010",
+        "student": "222222222",
+        "course": "DCCB-00143",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "13556",
+        "period": "202010",
+        "student": "222222222",
+        "course": "ECIN-00216",
+        "excluded": true,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "10763",
+        "period": "201910",
+        "student": "222222222",
+        "course": "DCTE-00000",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "10955",
+        "period": "201910",
+        "student": "222222222",
+        "course": "SSED-00100",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "11029",
+        "period": "201910",
+        "student": "222222222",
+        "course": "DCCB-00105",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "11040",
+        "period": "201910",
+        "student": "222222222",
+        "course": "DCCB-00107",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "11192",
+        "period": "201910",
+        "student": "222222222",
+        "course": "SSED-00006",
+        "excluded": true,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "11217",
+        "period": "201910",
+        "student": "222222222",
+        "course": "SSED-00102",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "11286",
+        "period": "201910",
+        "student": "222222222",
+        "course": "ECIN-00100",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "11322",
+        "period": "201910",
+        "student": "222222222",
+        "course": "DCCB-00106",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "REPROBADO"
+    },
+    {
+        "nrc": "SG001",
+        "period": "201910",
+        "student": "222222222",
+        "course": "SSED-10271",
+        "excluded": false,
+        "inscriptionType": "REGULARIZACION DE CREDITOS",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "25053",
+        "period": "202325",
+        "student": "222222222",
+        "course": "ECIN-00416",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "SG001",
+        "period": "202120",
+        "student": "222222222",
+        "course": "SSED-02184",
+        "excluded": false,
+        "inscriptionType": "REGULARIZACIÓN CONVALIDACIÓN",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "SG001",
+        "period": "202010",
+        "student": "222222222",
+        "course": "SSED-01184",
+        "excluded": false,
+        "inscriptionType": "REGULARIZACIÓN CONVALIDACIÓN",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "SG004",
+        "period": "201910",
+        "student": "222222222",
+        "course": "SSED-01184",
+        "excluded": false,
+        "inscriptionType": "REGULARIZACIÓN CONVALIDACIÓN",
+        "status": "APROBADO"
+    },
+    {
+        "nrc": "13548",
+        "period": "202410",
+        "student": "222222222",
+        "course": "ECIN-00560",
+        "excluded": false,
+        "inscriptionType": "REGULAR",
+        "status": "APROBADO"
+    }
+]

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
 import logoUcn from '../assets/logo-ucn.png';
 import '../styles/Login.css';
@@ -120,6 +120,9 @@ const Login: React.FC = () => {
           <button type="submit" className="login-btn" disabled={loading}>
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
+          <p className="login-register-link">
+            ¿No tienes cuenta? <Link to="/register">Regístrate con tus datos</Link>
+          </p>
         </form>
       </div>
     </div>

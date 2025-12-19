@@ -92,3 +92,14 @@
 .login-btn:hover {
   background: #fb8c00;
 }
+
+.login-register-link {
+  margin-top: 1rem;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.login-register-link a {
+  color: #ffe082;
+  font-weight: 600;
+}

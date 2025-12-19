@@ -1,0 +1,10 @@
+{
+    "rut": "222222222",
+    "carreras": [
+        {
+            "codigo": "8266",
+            "nombre": "ITI",
+            "catalogo": "202410"
+        }
+    ]
+}

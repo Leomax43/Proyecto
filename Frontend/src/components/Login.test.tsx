@@ -6,7 +6,8 @@ import Login from './Login';
 import '@testing-library/jest-dom';
 
 // Mocks se mantienen igual
-global.fetch = vi.fn();
+const fetchMock = vi.fn();
+globalThis.fetch = fetchMock as typeof globalThis.fetch;
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -28,7 +29,7 @@ describe('Componente de Login', () => {
       carreras: [{ id: 1, nombre: 'INGENIERÍA CIVIL EN COMPUTACIÓN E INFORMÁTICA' }]
     };
     
-    vi.mocked(fetch).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => mockSuccessResponse,
     } as Response);
@@ -52,7 +53,7 @@ describe('Componente de Login', () => {
 
   // --- PRUEBA 2 QUE FALLABA (AHORA CORREGIDA) ---
   it('debe mostrar un error de API si las credenciales son incorrectas', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ error: 'Credenciales incorrectas' }),
     } as Response);

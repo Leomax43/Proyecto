@@ -3,6 +3,7 @@ import { Routes, Route, Link } from "react-router-dom";
 
 import HomeScreen from "./HomeScreen";
 import Login from "./components/Login";
+import Register from "./components/Register";
 import Malla from "./Malla"; 
 import Avance from "./Avance";
 import Proyecciones from "./Proyecciones";
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/malla" element={<Malla />} />
         <Route path="/avance" element={<Avance />} />
         <Route path="/proyecciones" element={<Proyecciones />} />
+        <Route path="/register" element={<Register />} />
       </Routes>
     </div>
     
@@ -31,6 +33,7 @@ import { Routes, Route } from "react-router-dom";
 
 import HomeScreen from "./HomeScreen";
 import Login from "./components/Login";
+import Register from "./components/Register";
 import Malla from "./Malla"; 
 import Avance from "./Avance";
 import Proyecciones from "./Proyecciones";
@@ -47,6 +50,7 @@ export default function App() {
         <Route path="/malla" element={<Malla />} />
         <Route path="/avance" element={<Avance />} />
         <Route path="/proyecciones" element={<Proyecciones />} />
+        <Route path="/register" element={<Register />} />
       </Routes>
     </div>
     

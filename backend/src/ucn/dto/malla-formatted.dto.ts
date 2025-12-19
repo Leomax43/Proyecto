@@ -13,4 +13,6 @@ export class CursoDto {
   creditos: number;
   prereqs: string[];
   status?: string; // si se incluye rut del alumno
+  statusSourceCode?: string;
+  statusSourceName?: string;
 }
